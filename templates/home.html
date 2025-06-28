@@ -1,0 +1,394 @@
+{% extends "base.html" %}
+{% load static %}
+{% load markdown_extras %}
+
+{% block title %}Home - Public Library Bagarji{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero-section d-flex align-items-center justify-content-center text-center text-white">
+    <div class="container">
+        <h1 class="hero-title"><span class="typewriter-text"></span></h1>
+        <p class="hero-subtitle animate-fade-in">Discover a world of knowledge, stories, and inspiration</p>
+        <div class="d-flex justify-content-center gap-3 animate-fade-in">
+            <a href="{% url 'books' %}" class="btn btn-primary btn-lg">Browse Books</a>
+            <a href="{% url 'about' %}" class="btn btn-outline btn-lg">Learn More</a>
+        </div>
+    </div>
+</section>
+
+<!-- About Library Section -->
+<section class="about-library py-5">
+    <div class="container">
+        <div class="section-header text-center mb-5">
+            <h2 class="section-title">About Our Library</h2>
+            <p class="text-secondary">Your gateway to knowledge and cultural enrichment</p>
+        </div>
+        <div class="row align-items-center">
+            <div class="col-md-6 animate-fade-in order-1 order-md-2">
+                <img src="{% static 'images/library-interior.jpg' %}" alt="Library Interior" class="img-fluid rounded-4 shadow-lg">
+            </div>
+            <div class="col-md-6 mb-4 mb-md-0 animate-fade-in order-2 order-md-1">
+                <p class="text-secondary lead">Public Library Bagarji is a vibrant community hub dedicated to promoting literacy, education, and cultural awareness. Our mission is to provide free access to knowledge and resources for all members of our community.</p>
+                <ul class="list-unstyled text-secondary features-list mt-4">
+                    <li class="d-flex align-items-center mb-3">
+                        <i class="fas fa-fw fa-book me-3 fs-4" style="color: var(--fire-primary) !important;"></i> Extensive collection of books
+                    </li>
+                    <li class="d-flex align-items-center mb-3">
+                        <i class="fas fa-fw fa-laptop me-3 fs-4" style="color: var(--fire-primary) !important;"></i> Digital resources and e-books
+                    </li>
+                    <li class="d-flex align-items-center mb-3">
+                        <i class="fas fa-fw fa-users me-3 fs-4" style="color: var(--fire-primary) !important;"></i> Community events and workshops
+                    </li>
+                    <li class="d-flex align-items-center mb-3">
+                        <i class="fas fa-fw fa-graduation-cap me-3 fs-4" style="color: var(--fire-primary) !important;"></i> Educational programs
+                    </li>
+                </ul>
+                <a href="{% url 'about' %}" class="btn btn-primary mt-3">Read More About Us</a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Latest Blogs Section -->
+<section class="latest-blogs py-4 py-md-5">
+    <div class="container">
+        <div class="section-header mb-1">
+            <h2 class="section-title mb-0">Latest Blogs</h2>
+        </div>
+        <!-- Desktop cards - same structure as mobile -->
+        <div class="d-none d-md-block">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="row row-cols-3 g-4">
+                    {% for item in latest_blogs|slice:':3' %}
+                    <div class="col animate-fade-in">
+                        <article class="blog-card card h-100 clickable-card blog-image-card" onclick="window.location='/blogs/{{ item.id }}/'">
+                            <div class="blog-card-image" style="background-image: url('{{ item.image_url }}');"></div>
+                            <div class="blog-card-footer-overlay d-flex flex-column justify-content-end align-items-start">
+                                <h3 class="card-title text-primary mb-1">{{ item.title }}</h3>
+                                <div class="d-flex align-items-end justify-content-between" style="width: 100%;">
+                                    <div class="blog-content-preview" style="color:#fff; font-size:0.97rem; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow: ellipsis;">
+                                        {{ item.content|markdownify|safe }}
+                                    </div>
+                                    <a href="/blogs/{{ item.id }}/" style="color:#fff; text-decoration:none; font-size:1.1em; opacity:0.7; padding-left: 0.5rem;">
+                                        <i class="fas fa-arrow-right"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+                <div class="ms-3 d-flex align-items-center" style="height: 100%;">
+                    <a href="{% url 'blogs' %}" style="display:inline-block;">
+                        <i class="fas fa-arrow-right" style="color: #fff; font-size: 2.2rem; font-weight: 400; opacity: 0.7;"></i>
+            </a>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile vertical cards -->
+        <div class="d-block d-md-none">
+            {% for item in latest_blogs|slice:':3' %}
+            <div class="mb-3 animate-fade-in">
+                <article class="blog-card card h-100 clickable-card blog-image-card" onclick="window.location='/blogs/{{ item.id }}/'">
+                    <div class="blog-card-image" style="background-image: url('{{ item.image_url }}');"></div>
+                    <div class="blog-card-footer-overlay d-flex flex-column justify-content-end align-items-start">
+                        <h3 class="card-title text-primary mb-1">{{ item.title }}</h3>
+                        <div class="d-flex align-items-end justify-content-between" style="width: 100%;">
+                            <div class="blog-content-preview" style="color:#fff; font-size:0.97rem; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow: ellipsis;">
+                                {{ item.content|markdownify|safe }}
+                            </div>
+                            <a href="/blogs/{{ item.id }}/" style="color:#fff; text-decoration:none; font-size:1.1em; opacity:0.7; padding-left: 0.5rem;">
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </article>
+            </div>
+            {% endfor %}
+            <div class="text-center mt-2">
+                <a href="{% url 'blogs' %}" style="display:inline-block;">
+                    <i class="fas fa-arrow-right" style="color: #fff; font-size: 2.2rem; font-weight: 400; opacity: 0.7;"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Latest News Section -->
+<section class="latest-news py-4 py-md-5">
+    <div class="container">
+        <div class="section-header mb-1">
+            <h2 class="section-title mb-0">Latest News</h2>
+        </div>
+        <!-- Desktop cards - same structure as mobile -->
+        <div class="d-none d-md-block">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="row row-cols-3 g-4">
+                    {% for item in latest_news|slice:':3' %}
+                    <div class="col animate-fade-in">
+                        <article class="blog-card card h-100 clickable-card blog-image-card" onclick="window.location='/news/{{ item.id }}/'">
+                            <div class="blog-card-image" style="background-image: url('{{ item.image_url }}');"></div>
+                            <div class="blog-card-footer-overlay d-flex flex-column justify-content-end align-items-start">
+                                <h3 class="card-title text-primary mb-1">{{ item.title }}</h3>
+                                <div class="d-flex align-items-end justify-content-between" style="width: 100%;">
+                                    <div class="blog-content-preview" style="color:#fff; font-size:0.97rem; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow: ellipsis;">
+                                        {{ item.content|markdownify|safe }}
+                                    </div>
+                                    <a href="/news/{{ item.id }}/" style="color:#fff; text-decoration:none; font-size:1.1em; opacity:0.7; padding-left: 0.5rem;">
+                                        <i class="fas fa-arrow-right"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+                <div class="ms-3 d-flex align-items-center" style="height: 100%;">
+                    <a href="{% url 'news' %}" style="display:inline-block;">
+                        <i class="fas fa-arrow-right" style="color: #fff; font-size: 2.2rem; font-weight: 400; opacity: 0.7;"></i>
+            </a>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile vertical cards -->
+        <div class="d-block d-md-none">
+            {% for item in latest_news|slice:':3' %}
+            <div class="mb-3 animate-fade-in">
+                <article class="blog-card card h-100 clickable-card blog-image-card" onclick="window.location='/news/{{ item.id }}/'">
+                    <div class="blog-card-image" style="background-image: url('{{ item.image_url }}');"></div>
+                    <div class="blog-card-footer-overlay d-flex flex-column justify-content-end align-items-start">
+                        <h3 class="card-title text-primary mb-1">{{ item.title }}</h3>
+                        <div class="d-flex align-items-end justify-content-between" style="width: 100%;">
+                            <div class="blog-content-preview" style="color:#fff; font-size:0.97rem; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow: ellipsis;">
+                                {{ item.content|markdownify|safe }}
+                            </div>
+                            <a href="/news/{{ item.id }}/" style="color:#fff; text-decoration:none; font-size:1.1em; opacity:0.7; padding-left: 0.5rem;">
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </article>
+            </div>
+            {% endfor %}
+            <div class="text-center mt-2">
+                <a href="{% url 'news' %}" style="display:inline-block;">
+                    <i class="fas fa-arrow-right" style="color: #fff; font-size: 2.2rem; font-weight: 400; opacity: 0.7;"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Latest Book Reviews Section -->
+<section class="latest-reviews py-4 py-md-5">
+    <div class="container">
+        <div class="section-header mb-1">
+            <h2 class="section-title mb-0">Latest Book Reviews</h2>
+        </div>
+        <!-- Desktop cards - same structure as mobile -->
+        <div class="d-none d-md-block">
+            <div class="d-flex align-items-center">
+                <div class="flex-grow-1">
+                    <div class="row row-cols-3 g-4">
+                    {% for item in latest_reviews|slice:':3' %}
+                    <div class="col animate-fade-in">
+                        <article class="blog-card card h-100 clickable-card blog-image-card" onclick="window.location='/book-reviews/{{ item.id }}/'">
+                            <div class="blog-card-image" style="background-image: url('{{ item.image_url }}');"></div>
+                            <div class="blog-card-footer-overlay d-flex flex-column justify-content-end align-items-start">
+                                <h3 class="card-title text-primary mb-1">{{ item.book_title }}</h3>
+                                <div class="d-flex align-items-end justify-content-between" style="width: 100%;">
+                                    <div class="blog-content-preview" style="color:#fff; font-size:0.97rem; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow: ellipsis;">
+                                        {{ item.review_text|markdownify|safe }}
+                                    </div>
+                                    <a href="/book-reviews/{{ item.id }}/" style="color:#fff; text-decoration:none; font-size:1.1em; opacity:0.7; padding-left: 0.5rem;">
+                                        <i class="fas fa-arrow-right"></i>
+                                    </a>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+                <div class="ms-3 d-flex align-items-center" style="height: 100%;">
+                    <a href="{% url 'book_reviews' %}" style="display:inline-block;">
+                        <i class="fas fa-arrow-right" style="color: #fff; font-size: 2.2rem; font-weight: 400; opacity: 0.7;"></i>
+            </a>
+                </div>
+            </div>
+        </div>
+        <!-- Mobile vertical cards -->
+        <div class="d-block d-md-none">
+            {% for item in latest_reviews|slice:':3' %}
+            <div class="mb-3 animate-fade-in">
+                <article class="blog-card card h-100 clickable-card blog-image-card" onclick="window.location='/book-reviews/{{ item.id }}/'">
+                    <div class="blog-card-image" style="background-image: url('{{ item.image_url }}');"></div>
+                    <div class="blog-card-footer-overlay d-flex flex-column justify-content-end align-items-start">
+                        <h3 class="card-title text-primary mb-1">{{ item.book_title }}</h3>
+                        <div class="d-flex align-items-end justify-content-between" style="width: 100%;">
+                            <div class="blog-content-preview" style="color:#fff; font-size:0.97rem; line-height:1.4; display:-webkit-box; -webkit-line-clamp:2; line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; text-overflow: ellipsis;">
+                                {{ item.review_text|markdownify|safe }}
+                            </div>
+                            <a href="/book-reviews/{{ item.id }}/" style="color:#fff; text-decoration:none; font-size:1.1em; opacity:0.7; padding-left: 0.5rem;">
+                                <i class="fas fa-arrow-right"></i>
+                            </a>
+                        </div>
+                    </div>
+                </article>
+            </div>
+            {% endfor %}
+            <div class="text-center mt-2">
+                <a href="{% url 'book_reviews' %}" style="display:inline-block;">
+                    <i class="fas fa-arrow-right" style="color: #fff; font-size: 2.2rem; font-weight: 400; opacity: 0.7;"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="features py-3">
+    <div class="container">
+        <div class="row row-cols-1 row-cols-md-3 g-4">
+            <div class="col animate-fade-in">
+                <div class="feature-card card text-center h-100 p-4">
+                    <i class="fas fa-book-reader mb-4 display-4"></i>
+                    <h3 class="card-title">Book Reviews</h3>
+                    <p class="text-secondary flex-grow-1">Discover honest and insightful reviews of the latest books</p>
+                    <a href="{% url 'book_reviews' %}" class="btn btn-primary mt-auto">Read Reviews</a>
+                </div>
+            </div>
+            <div class="col animate-fade-in">
+                <div class="feature-card card text-center h-100 p-4">
+                    <i class="fas fa-download mb-4 display-4"></i>
+                    <h3 class="card-title">Download Books</h3>
+                    <p class="text-secondary flex-grow-1">Access our collection of downloadable PDF books</p>
+                    <a href="{% url 'books' %}" class="btn btn-primary mt-auto">Browse Books</a>
+                </div>
+            </div>
+            <div class="col animate-fade-in">
+                <div class="feature-card card text-center h-100 p-4">
+                    <i class="fas fa-envelope mb-4 display-4"></i>
+                    <h3 class="card-title">Get in Touch</h3>
+                    <p class="text-secondary flex-grow-1">Have questions? We'd love to hear from you</p>
+                    <a href="{% url 'contact' %}" class="btn btn-primary mt-auto">Contact Us</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Mobile carousel animation for card rows
+function updateCarouselClasses() {
+    if (window.innerWidth > 600) return;
+    const grids = document.querySelectorAll('.blog-grid');
+    grids.forEach(grid => {
+        const cards = Array.from(grid.children);
+        const container = grid.parentElement;
+        const scrollLeft = container.scrollLeft;
+        const containerWidth = container.offsetWidth;
+        const center = scrollLeft + containerWidth / 2;
+        cards.forEach(col => {
+            const cardRect = col.getBoundingClientRect();
+            const colCenter = cardRect.left + cardRect.width / 2;
+            const dist = Math.abs((colCenter + window.scrollX) - (container.getBoundingClientRect().left + window.scrollX + containerWidth / 2));
+            col.classList.remove('carousel-center', 'carousel-side', 'carousel-far');
+            if (dist < cardRect.width * 0.6) {
+                col.classList.add('carousel-center');
+            } else if (dist < cardRect.width * 1.6) {
+                col.classList.add('carousel-side');
+            } else {
+                col.classList.add('carousel-far');
+            }
+        });
+    });
+}
+document.addEventListener('DOMContentLoaded', function() {
+    const containers = document.querySelectorAll('.blog-grid-container');
+    if (window.innerWidth <= 600) {
+        containers.forEach(container => {
+            container.addEventListener('scroll', updateCarouselClasses);
+        });
+        window.addEventListener('resize', updateCarouselClasses);
+        setTimeout(updateCarouselClasses, 200);
+    }
+});
+</script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const typewriterTextElement = document.querySelector('.typewriter-text');
+        // Define cursor as an HTML string
+        const cursorHTML = '<span class="typing-cursor">|</span>';
+        // Check screen width to determine the text
+        const textToType = "Welcome to Public Library<br>Bagarji";
+        let charIndex = 0;
+        let isTyping = true;
+        let currentText = '';
+        function type() {
+            if (charIndex < textToType.length) {
+                // Handle <br> tag
+                if (textToType.substring(charIndex, charIndex + 4) === '<br>') {
+                    currentText += '<br>';
+                    charIndex += 4;
+                } else {
+                    currentText += textToType.charAt(charIndex);
+                    charIndex++;
+                }
+                typewriterTextElement.innerHTML = currentText + cursorHTML;
+                setTimeout(type, 100); // Typing speed
+            } else {
+                isTyping = false;
+                typewriterTextElement.innerHTML = currentText + cursorHTML; // Keep cursor at the end
+                setTimeout(erase, 2000); // Wait before erasing
+            }
+        }
+        function erase() {
+            if (currentText.length > 0) {
+                // Handle <br> tag during erasing
+                if (currentText.endsWith('<br>')) {
+                    currentText = currentText.substring(0, currentText.length - 4);
+                } else {
+                    currentText = currentText.substring(0, currentText.length - 1);
+                }
+                typewriterTextElement.innerHTML = currentText + cursorHTML;
+                setTimeout(erase, 50); // Erasing speed
+            } else {
+                isTyping = true;
+                charIndex = 0; // Reset for typing
+                setTimeout(type, 500); // Wait before re-typing
+            }
+        }
+        // Start the typing effect when the page loads
+        type();
+    });
+</script>
+{% endblock %} 
+
+<style>
+    /* Set color for the features list on all screen sizes */
+    .features-list li,
+    .features-list li i {
+        color: var(--fire-primary) !important;
+    }
+    /* Mobile-specific font size adjustments for home page content */
+    @media (max-width: 767px) {
+        .section-title,
+        .feature-card .card-title {
+            font-size: 1.8rem !important;
+        }
+        .section-header p.text-secondary,
+        .feature-card p.text-secondary,
+        .about-library p.lead,
+        .features-list li {
+            font-size: 0.9rem !important;
+        }
+    }
+</style> 

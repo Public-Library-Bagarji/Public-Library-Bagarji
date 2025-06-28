@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}About Us - Public Library Bagarji{% endblock %}
+
+{% block content %}
+<section class="about-page" style="padding-bottom: 5rem;">
+    <!-- Hero Section -->
+    <div class="hero-section text-center text-white">
+        <div class="container">
+            <h1 class="hero-title animate-fade-in">About Public Library <span class="d-inline d-md-none"><br></span>Bagarji</h1>
+            <p class="hero-subtitle animate-fade-in">Empowering our community through knowledge and education since 2024</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Mission Section -->
+        <section class="mission-section">
+            <div class="section-content">
+                <div class="text-content">
+                    <h2>Our Mission</h2>
+                    <div class="d-block d-md-none">
+                        <div class="image-content mb-3">
+                            <img src="{% static 'images/library-mission.jpg' %}" alt="Library Mission" data-src="{% static 'images/library-mission.jpg' %}">
+                        </div>
+                    </div>
+                    <p>Public Library Bagarji is dedicated to providing free access to knowledge, promoting literacy, and fostering a love for reading in our community. We believe that access to books and educational resources is a fundamental right that should be available to everyone.</p>
+                    <p>Our library serves as a community hub where people can come together to learn, share ideas, and engage in cultural activities. We strive to create an inclusive environment that welcomes people of all ages and backgrounds.</p>
+                </div>
+                <div class="image-content d-none d-md-block">
+                    <img src="{% static 'images/library-mission.jpg' %}" alt="Library Mission" data-src="{% static 'images/library-mission.jpg' %}">
+                </div>
+            </div>
+        </section>
+
+        <!-- History Section -->
+        <section class="history-section">
+            <div class="section-content reverse">
+                <div class="text-content">
+                    <h2>Our History</h2>
+                    <div class="d-block d-md-none">
+                        <div class="image-content mb-3">
+                            <img src="{% static 'images/library-history.jpg' %}" alt="Library History" data-src="{% static 'images/library-history.jpg' %}">
+                        </div>
+                    </div>
+                    <p>Founded in 2024, Public Library Bagarji began as a small community initiative to provide access to books and educational resources in the Bagarji area. What started as a modest collection of books has grown into a comprehensive library serving thousands of community members.</p>
+                    <p>Over the years, we have expanded our services to include digital resources, educational programs, and community events. Our journey has been marked by the support of our community and the dedication of our staff and volunteers.</p>
+                </div>
+                <div class="image-content d-none d-md-block">
+                    <img src="{% static 'images/library-history.jpg' %}" alt="Library History" data-src="{% static 'images/library-history.jpg' %}">
+                </div>
+            </div>
+        </section>
+
+        <!-- Services Section -->
+        <section class="services-section">
+            <h2>Our Services</h2>
+            <div class="services-grid">
+                <a href="{% url 'books' %}" style="text-decoration: none; color: inherit;">
+                    <div class="service-card card">
+                        <i class="fas fa-book"></i>
+                        <h3>Book Collection</h3>
+                        <p>Access our extensive collection of books, including fiction, non-fiction, educational materials, and digital resources.</p>
+                    </div>
+                </a>
+                <a href="{% url 'digital_resources' %}" style="text-decoration: none; color: inherit;">
+                    <div class="service-card card">
+                        <i class="fas fa-laptop"></i>
+                        <h3>Digital Resources</h3>
+                        <p>Download e-books, access online databases, and use our computer facilities for research and learning.</p>
+                    </div>
+                </a>
+                <a href="{% url 'community_programs' %}" style="text-decoration: none; color: inherit;">
+                    <div class="service-card card">
+                        <i class="fas fa-users"></i>
+                        <h3>Community Programs</h3>
+                        <p>Participate in book clubs, workshops, and cultural events designed to bring our community together.</p>
+                    </div>
+                </a>
+                <a href="{% url 'contact' %}" style="text-decoration: none; color: inherit;">
+                    <div class="service-card card">
+                        <i class="fas fa-graduation-cap"></i>
+                        <h3>Educational Support</h3>
+                        <p>Get help with homework, research projects, and access to educational materials for all ages.</p>
+                    </div>
+                </a>
+            </div>
+        </section>
+
+        <!-- Team Section -->
+        <section class="team-section">
+            <h2>Our Team</h2>
+            <div class="team-grid">
+                <div class="team-member card" style="border: 1px solid var(--fire-primary); border-radius: 16px; padding: 1.5rem;">
+                    <img src="{% static 'images/developer.jpg' %}" alt="Developer" class="mx-auto d-block" style="width: 140px; height: 140px; object-fit: cover; border-radius: 50%; border: 3px solid var(--fire-primary); margin-bottom: 1rem;">
+                    <h3 style="margin-bottom: 0.5rem;">Kaleemullah Khan</h3>
+                    <p class="position" style="margin-bottom: 0.5rem;">Developer</p>
+                    <p class="bio" style="margin-bottom: 1rem;">Passionate about creating beautiful and functional web applications that serve the community.</p>
+                    <div class="social-links mt-2">
+                        <a href="https://github.com/kaleemullahkhan786" class="btn btn-outline-light btn-social mx-1" target="_blank"><i class="fab fa-github"></i></a>
+                        <a href="#" class="btn btn-outline-light btn-social mx-1" target="_blank"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="https://x.com/KaleemullahK786?t=cHZxrAm2etxoAbfcyIfjnw&s=09" class="btn btn-outline-light btn-social mx-1" target="_blank"><i class="fab fa-twitter"></i></a>
+                        <a href="https://www.facebook.com/share/1FpCguDnkm/" class="btn btn-outline-light btn-social mx-1" target="_blank"><i class="fab fa-facebook-f"></i></a>
+                        <a href="https://www.instagram.com/kaleemullah_khan_channa?igsh=aHlkdTN3MTBoNWMy" class="btn btn-outline-light btn-social mx-1" target="_blank"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+                <!-- Add more team members as needed -->
+            </div>
+        </section>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Hero Title Sizes */
+    .hero-title { font-size: 4.5rem !important; }
+    .hero-subtitle { font-size: 1.1rem !important; }
+    .btn { font-size: 1.1rem !important; }
+
+    /* Remove extra vertical gaps between sections */
+    .mission-section, .history-section, .services-section, .team-section {
+        padding-top: 1rem !important;
+        padding-bottom: 1rem !important;
+        margin-bottom: 0 !important;
+    }
+    .section-content, .services-grid, .team-grid {
+        gap: 1rem !important;
+        margin-bottom: 0 !important;
+    }
+    .service-card, .team-member {
+        margin-bottom: 0 !important;
+    }
+    .about-page {
+        padding-bottom: 2rem !important;
+    }
+    /* Remove margin from last section */
+    .about-page > .container > section:last-child {
+        margin-bottom: 0 !important;
+        padding-bottom: 0 !important;
+    }
+    @media (max-width: 1199px) { .hero-title { font-size: 4rem !important; } }
+    @media (max-width: 991px) { .hero-title { font-size: 3.5rem !important; } }
+    @media (max-width: 767px) {
+        .hero-title { font-size: 1.8rem !important; }
+        .hero-subtitle { font-size: 0.9rem !important; }
+        .btn { font-size: 0.9rem !important; }
+        .text-content h2 { font-size: 1.8rem !important; }
+        .text-content p { font-size: 0.9rem !important; line-height: 1.6 !important; }
+        .services-section h2 { font-size: 1.8rem !important; margin-bottom: 1rem !important; }
+        .service-card h3 { font-size: 1.2rem !important; }
+        .service-card p { font-size: 0.9rem !important; line-height: 1.5 !important; }
+        .service-card i { font-size: 2.5rem !important; }
+        .team-section h2 { font-size: 1.8rem !important; margin-bottom: 1rem !important; }
+        .team-member h3 { font-size: 1.3rem !important; }
+        .team-member .position { font-size: 1rem !important; }
+        .team-member .bio { font-size: 0.9rem !important; line-height: 1.5 !important; }
+        .team-member img { width: 140px !important; height: 140px !important; }
+        .mission-section, .history-section, .services-section, .team-section {
+            padding: 1rem 0 !important;
+        }
+        .section-content { gap: 1rem !important; }
+        .service-card, .team-member { padding: 1.5rem !important; }
+        .team-member .social-links {
+            display: flex !important;
+            justify-content: center !important;
+            align-items: center !important;
+            flex-wrap: nowrap !important;
+            width: 100% !important;
+            text-align: center !important;
+        }
+        .team-member .social-links .btn {
+            margin: 0.1rem !important;
+            padding: 0.375rem 0.5rem !important;
+            font-size: 0.8rem !important;
+            flex-shrink: 0 !important;
+        }
+    }
+    .hero-section {
+        padding-top: 0.7rem !important;
+        padding-bottom: 0.7rem !important;
+        margin-bottom: 0.7rem !important;
+    }
+    .hero-title {
+        margin-bottom: 0.3rem !important;
+        padding-bottom: 0.3rem !important;
+    }
+    @media (max-width: 767px) {
+        .hero-section {
+            padding-top: 1rem !important;
+            padding-bottom: 1rem !important;
+            margin-bottom: 1rem !important;
+        }
+        .hero-title {
+            margin-bottom: 0.5rem !important;
+            padding-bottom: 0.5rem !important;
+        }
+    }
+</style>
+{% endblock %} 

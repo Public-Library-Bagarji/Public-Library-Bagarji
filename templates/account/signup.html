@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container d-flex align-items-center justify-content-center min-vh-100">
+  <div class="card shadow p-4" style="max-width: 400px; width: 100%;">
+    <div class="text-center mb-4">
+      <img src="{% static 'images/websitemainlogo.jpg' %}" alt="Public Library Bagarji Logo" style="height: 150px;">
+      <h3 class="mt-2 mb-0">Register</h3>
+    </div>
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-success">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+    <form method="post" action="">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="id_username" class="form-label" style="color: #fff;">Name</label>
+        <input type="text" class="form-control" id="id_username" name="username" required style="background-color: #fff;" value="{{ username|default:'' }}">
+        {% if username_error %}
+          <div class="text-danger small mt-1">{{ username_error }}</div>
+        {% endif %}
+      </div>
+      <div class="mb-3">
+        <label for="id_email" class="form-label" style="color: #fff;">Email</label>
+        <input type="email" class="form-control" id="id_email" name="email" required style="background-color: #fff;" value="{{ email|default:'' }}">
+        {% if email_error %}
+          <div class="text-danger small mt-1">{{ email_error }}</div>
+        {% endif %}
+      </div>
+      <div class="mb-3">
+        <label for="id_phone" class="form-label" style="color: #fff;">Phone Number</label>
+        <input type="text" class="form-control" id="id_phone" name="phone" required style="background-color: #fff;" value="{{ phone|default:'' }}">
+      </div>
+      <div class="mb-3">
+        <label for="id_password1" class="form-label" style="color: #fff;">Password</label>
+        <input type="password" class="form-control" id="id_password1" name="password1" required style="background-color: #fff;">
+        {% if password_error %}
+          <div class="text-danger small mt-1">{{ password_error }}</div>
+        {% endif %}
+      </div>
+      <div class="mb-3">
+        <label for="id_password2" class="form-label" style="color: #fff;">Confirm Password</label>
+        <input type="password" class="form-control" id="id_password2" name="password2" required style="background-color: #fff;">
+      </div>
+      <button type="submit" class="btn btn-success w-100">Register</button>
+    </form>
+    <div class="text-center">
+      <a href="{% url 'login' %}">Already have an account? Login</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+{% endblock %} 

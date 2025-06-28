@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Activate Your Account - Public Library Bagarji</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f7f7f7; color: #222; margin: 0; padding: 0; }
+        .email-container { max-width: 500px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); padding: 2rem; }
+        .logo { display: block; margin: 0 auto 1.5rem auto; height: 60px; }
+        .btn { display: inline-block; background: #ff6600; color: #fff !important; padding: 0.9rem 2rem; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 1.1rem; margin-top: 1.5rem; }
+        .btn:hover { background: #e65c00; }
+        .footer { margin-top: 2.5rem; color: #888; font-size: 0.95rem; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <img src="{{ domain }}/static/images/websitemainlogo.jpg" alt="Public Library Bagarji Logo" class="logo">
+        <h2>Welcome, {{ user.username }}!</h2>
+        <p>Thank you for registering at <strong>Public Library Bagarji</strong>.</p>
+        <p>To activate your account, please click the button below:</p>
+        <p style="text-align: center;">
+            <a href="{{ activation_link }}" class="btn">Activate Account</a>
+        </p>
+        <p>If the button above does not work, copy and paste the following link into your browser:</p>
+        <p style="word-break: break-all; color: #555; font-size: 0.98rem;">{{ activation_link }}</p>
+        <div class="footer">
+            &copy; {{ now|date:'Y' }} Public Library Bagarji. All rights reserved.
+        </div>
+    </div>
+</body>
+</html> 

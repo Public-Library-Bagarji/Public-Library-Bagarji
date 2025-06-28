@@ -1,0 +1,32 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Congratulations - Public Library Bagarji</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f7f7f7; color: #222; margin: 0; padding: 0; }
+        .email-container { max-width: 500px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); padding: 2rem; }
+        .logo { display: block; margin: 0 auto 1.5rem auto; height: 60px; }
+        .congrats { font-size: 2rem; font-weight: bold; color: #28a745; text-align: center; margin: 2rem 0 1rem 0; }
+        .quotes { margin: 2rem 0; padding: 1rem; background: #f0f8ff; border-left: 4px solid #007bff; border-radius: 8px; }
+        .footer { margin-top: 2.5rem; color: #888; font-size: 0.95rem; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <img src="{{ domain }}/static/images/websitemainlogo.jpg" alt="Public Library Bagarji Logo" class="logo">
+        <div class="congrats">Congratulations, {{ user.username }}!</div>
+        <p>Your account has been successfully verified. Welcome to the <strong>Public Library Bagarji</strong> community!</p>
+        <div class="quotes">
+            <p><em>"A library is not a luxury but one of the necessities of life."</em> <br>— Henry Ward Beecher</p>
+            <p><em>"Joining a community of readers is joining a community of dreamers."</em></p>
+            <p><em>"Here, you gain access to knowledge, inspiration, and lifelong friendships."</em></p>
+        </div>
+        <p>We are excited to have you with us. Explore, learn, and grow with our vibrant community. Stay tuned for updates, events, and exclusive resources!</p>
+        <div class="footer">
+            &copy; {{ now|date:'Y' }} Public Library Bagarji. All rights reserved.
+        </div>
+    </div>
+</body>
+</html> 

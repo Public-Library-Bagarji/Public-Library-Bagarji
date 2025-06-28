@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% load static %}
+{% block content %}
+<div class="container d-flex align-items-center justify-content-center min-vh-100">
+  <div class="card shadow p-4" style="max-width: 400px; width: 100%;">
+    <div class="text-center mb-4">
+      <img src="{% static 'images/websitemainlogo.jpg' %}" alt="Public Library Bagarji Logo" style="height: 80px;">
+      <h3 class="mt-2 mb-0">Verify Your Email</h3>
+      <p class="text-secondary">Enter the OTP code sent to your email address.</p>
+    </div>
+    {% if error %}
+      <div class="alert alert-danger">{{ error }}</div>
+    {% endif %}
+    <form method="post" action="{% url 'verify_otp' %}">
+      {% csrf_token %}
+      <input type="hidden" name="email" value="{{ email }}">
+      <div class="mb-3">
+        <label for="otp_code" class="form-label">OTP Code</label>
+        <input type="text" class="form-control" id="otp_code" name="otp_code" maxlength="6" required autofocus>
+      </div>
+      <button type="submit" class="btn btn-primary w-100">Verify</button>
+    </form>
+    <div class="text-center mt-3">
+      <span class="text-muted">Didn't receive the code?</span>
+      <a href="?resend=1&email={{ email }}">Resend OTP</a>
+    </div>
+  </div>
+</div>
+{% endblock %} 

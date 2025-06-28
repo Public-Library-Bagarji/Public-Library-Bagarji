@@ -1,0 +1,12 @@
+{% load static %}
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container d-flex align-items-center justify-content-center min-vh-100">
+  <div class="card shadow p-4 text-center" style="max-width: 400px; width: 100%;">
+    <img src="{% static 'images/logo.png' %}" alt="Library Logo" style="height: 60px;" class="mb-3">
+    <h4>You have been logged out.</h4>
+    <a href="/" class="btn btn-primary mt-3">Return to Home</a>
+  </div>
+</div>
+{% endblock %} 

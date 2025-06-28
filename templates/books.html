@@ -1,0 +1,652 @@
+{% extends "base.html" %}
+
+{% block title %}Books - Public Library Bagarji{% endblock %}
+
+{% block content %}
+<section class="books-page" style="padding-bottom: 5rem;">
+    <div class="hero-section text-center text-white">
+        <div class="container">
+            <h1 class="hero-title animate-fade-in">Our Book Collection</h1>
+            <p class="hero-subtitle animate-fade-in">Explore our diverse range of books.</p>
+        </div>
+    </div>
+
+    <!-- Search Bar -->
+    <section class="search-filter-section py-2 pb-md-5 pb-3">
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-8 col-lg-6">
+                    <div class="input-group search-box shadow-sm" style="position:relative;">
+                        <input type="text" class="form-control search-input" id="bookSearchInput" placeholder="Search books..." autocomplete="off">
+                        <button class="btn btn-primary" type="button" id="bookSearchButton"><i class="fas fa-search"></i></button>
+                        <div id="bookSuggestionsDropdown" class="suggestion-dropdown"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="row justify-content-center mt-3">
+                <div class="col-md-10 col-lg-8 d-flex justify-content-center gap-3 flex-wrap">
+                    <select id="bookCategoryFilter" class="form-select filter-select bg-darker text-primary border-fire shadow-sm" style="max-width: 150px; min-width: 100px; width: 150px;">
+                        <option value="all">All Categories</option>
+                        {% for cat in book_categories %}
+                            <option value="{{ cat }}">{{ cat|title }}</option>
+                        {% endfor %}
+                    </select>
+                    <select id="bookSortOrder" class="form-select filter-select bg-darker text-primary border-fire shadow-sm" style="max-width: 150px; min-width: 100px; width: 150px;">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                        <option value="alphabetical">Alphabetical</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="container mt-md-5 mt-3">
+        <div class="books-grid-container">
+        <div class="book-grid" id="books-container">
+            <!-- Loading spinner -->
+            <div class="col-12 text-center py-5">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+            </div>
+        </div>
+        <div class="text-center py-5" id="no-books-message" style="display:none;">
+            <p class="lead">No books available at the moment. Please check back later!</p>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+/* Hero Title Sizes */
+.hero-title { font-size: 4.5rem !important; }
+.hero-subtitle { font-size: 1.1rem !important; }
+
+/* Universal Button Sizes */
+.btn { font-size: 0.9rem !important; }
+
+@media (max-width: 1199px) { .hero-title { font-size: 4rem !important; } }
+@media (max-width: 991px) { .hero-title { font-size: 3.5rem !important; } }
+@media (max-width: 767px) {
+    .hero-title { font-size: 1.8rem !important; }
+    .hero-subtitle { font-size: 0.9rem !important; }
+    .btn { font-size: 0.9rem !important; }
+}
+
+.books-page {
+    background: var(--light-gray);
+    padding-bottom: 5rem;
+}
+
+#books-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    gap: 1rem;
+}
+
+.book-card {
+    transition: box-shadow 0.3s ease, transform 0.3s cubic-bezier(.4,2,.3,1);
+    border: 2px solid var(--fire-color);
+    box-shadow: 0 0 15px rgba(255, 120, 0, 0.4);
+    width: 220px;
+    height: 300px;
+    margin: 0;
+    overflow: hidden;
+    transform: none;
+    position: relative;
+}
+
+.book-card:hover {
+    box-shadow: 0 0 40px 8px rgba(255, 60, 0, 0.95), 0 12px 24px rgba(0,0,0,0.15);
+    border-color: var(--fire-primary, #ff3c00);
+    transform: translateY(-8px) scale(1.08);
+    z-index: 10;
+}
+
+.book-card .card-img-top {
+    width: 100%;
+    height: 200px; /* Further reduced height */
+    object-fit: cover;
+    box-shadow: none;
+    transition: none;
+    transform: none;
+}
+
+.book-card:hover .card-img-top {
+    transform: none;
+}
+
+.book-card.no-animation {
+    transition: none;
+    transform: none;
+}
+
+.book-card .card-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+.book-card .card-body {
+    padding: 0.75rem;
+}
+
+.book-card .card-text {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.book-card .btn {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.8rem !important;
+    width: 100%; /* Make button full-width */
+}
+
+.input-group.search-box { position: relative !important; }
+
+#bookSearchInput {
+    position: relative;
+    z-index: 2;
+}
+
+.search-input {
+    background: #18191a !important;
+    color: #fff !important;
+    border-radius: 50px 0 0 50px !important;
+    border: 2px solid #ff944d !important;
+    border-right: none !important;
+    margin-right: 0 !important;
+    flex: 1 1 0% !important;
+    min-width: 0 !important;
+    height: 48px !important;
+    width: 1% !important;
+    display: block !important;
+    font-size: 16px !important;
+    font-weight: 400 !important;
+    box-shadow: 0 2px 10px rgba(255, 120, 0, 0.08) !important;
+    transition: border 0.2s, box-shadow 0.2s;
+}
+
+.search-input:focus {
+    outline: none !important;
+    border-color: #ff4500 !important;
+    box-shadow: 0 4px 20px rgba(255, 120, 0, 0.15) !important;
+}
+
+.search-input::placeholder {
+    color: #fff !important;
+    opacity: 1 !important;
+    font-weight: 400 !important;
+    letter-spacing: 0.5px;
+}
+
+.btn-primary {
+    border-radius: 0 50px 50px 0 !important;
+    margin-left: 0 !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 20px !important;
+    box-shadow: none !important;
+    padding: 0 20px !important;
+    border-left: none !important;
+    background: linear-gradient(135deg, #ff944d 0%, #ff4500 100%) !important;
+    color: #fff !important;
+    border: 2px solid #ff944d !important;
+    border-left: none !important;
+    transition: background 0.2s, border 0.2s;
+}
+
+.btn-primary:hover {
+    background: #ff4500 !important;
+    color: #fff !important;
+    border-color: #ff4500 !important;
+}
+
+.animate-fade-in {
+    animation: fadeIn 0.5s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* Mobile-Specific Styles for Books Page */
+@media (max-width: 767px) {
+    #books-container {
+        display: flex !important;
+        flex-wrap: wrap !important;
+        gap: 0.5rem !important;
+        justify-content: center !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+    }
+    .book-card {
+        width: 44vw !important;
+        max-width: 150px !important;
+        height: calc(44vw * 1.36) !important;
+        min-height: unset !important;
+        margin: 0 !important;
+        border-radius: 16px !important;
+        overflow: hidden !important;
+        box-shadow: 0 0 15px rgba(255, 60, 0, 0.4);
+        position: relative !important;
+        padding: 0 !important;
+    }
+    .book-card > a {
+        display: block !important;
+        width: 100% !important;
+        height: 100% !important;
+        position: relative !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+    .blog-card-image {
+        position: absolute !important;
+        top: 0; left: 0; right: 0; bottom: 0;
+        width: 100% !important;
+        height: 100% !important;
+        min-height: unset !important;
+        border-radius: 0 !important;
+        background-size: cover !important;
+        background-position: center !important;
+        z-index: 1;
+    }
+    .blog-card-footer-overlay {
+        position: absolute !important;
+        left: 0; right: 0; bottom: 0;
+        width: 100% !important;
+        z-index: 2;
+        padding: 0 0.8rem 0.2rem 0.4rem !important;
+        font-size: 0.98rem !important;
+        border-bottom-left-radius: 16px !important;
+        border-bottom-right-radius: 16px !important;
+    }
+    .blog-card-footer-overlay .card-title {
+        font-size: 1rem !important;
+    }
+    .book-card:hover {
+        transform: none !important;
+        box-shadow: 0 0 15px rgba(255, 60, 0, 0.4) !important;
+        border-color: var(--fire-primary, #ff3c00) !important;
+    }
+}
+
+/* Newsletter Card Responsive Styles */
+.newsletter-section.card {
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    margin-top: 3rem !important;
+}
+@media (max-width: 767px) {
+    .newsletter-section.card {
+        padding: 1.5rem 0.7rem !important;
+        max-width: 100% !important;
+        margin-top: 3rem !important;
+    }
+    .newsletter-title {
+        font-size: 1.3rem !important;
+    }
+    .newsletter-section p.lead {
+        font-size: 1rem !important;
+    }
+    .newsletter-form {
+        flex-direction: column !important;
+        gap: 0.7rem !important;
+        align-items: stretch !important;
+    }
+    .newsletter-form input[type="email"] {
+        font-size: 1rem !important;
+        padding: 0.7rem 1rem !important;
+        max-width: 100% !important;
+    }
+    .newsletter-form .btn.btn-primary {
+        font-size: 1rem !important;
+        padding: 0.7rem 0 !important;
+        width: 100% !important;
+    }
+}
+
+.ghost-input {
+  position: absolute;
+  left: 0; top: 0; width: 100%; height: 100%;
+  color: #ff944d;
+  opacity: 0.85;
+  pointer-events: none;
+  font-size: 1rem;
+  padding: 0.75rem 1rem;
+  white-space: pre;
+  z-index: 2;
+  font-family: inherit;
+  line-height: 1.5;
+  background: transparent;
+  border: none;
+  outline: none;
+}
+
+.suggestion-dropdown {
+    z-index: 2147483647 !important;
+    border-width: 0.5px !important;
+    border-radius: 8px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+    width: calc(100% - 48px) !important;
+    left: 0 !important;
+    right: auto !important;
+    margin-left: 0 !important;
+    transform: none !important;
+    backdrop-filter: blur(8px) !important;
+    -webkit-backdrop-filter: blur(8px) !important;
+}
+
+/* Override any potential hiding styles */
+.suggestion-dropdown[style*="display: block"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+
+.suggestion-item {
+    padding: 12px 20px !important;
+    color: #fff !important;
+    cursor: pointer !important;
+    font-size: 16px !important;
+    font-weight: 400 !important;
+    border-bottom: 1px solid #292929 !important;
+    background: transparent !important;
+    transition: all 0.2s;
+    position: relative !important;
+    line-height: 1.4 !important;
+}
+
+.suggestion-item:last-child { border-bottom: none !important; }
+.suggestion-item.active, .suggestion-item:hover {
+    background: linear-gradient(90deg, #ff944d33 0%, #ff4500 100%) !important;
+    color: #fff !important;
+}
+.suggestion-ghost-inline {
+    color: #ff944d !important;
+    opacity: 1 !important;
+    font-weight: 400 !important;
+}
+.suggestion-item.active .suggestion-ghost-inline, 
+.suggestion-item:hover .suggestion-ghost-inline {
+    color: #fff !important;
+    opacity: 1 !important;
+}
+
+/* --- SUGGESTION DROPDOWN PARENT OVERRIDES --- */
+.search-box,
+.search-filter-section,
+.row,
+.col-md-8,
+.col-lg-6,
+.container {
+    overflow: visible !important;
+    position: static !important;
+    z-index: auto !important;
+}
+
+#bookCategoryFilter,
+#bookSortOrder {
+    max-width: 150px !important;
+    min-width: 100px !important;
+    width: 150px !important;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const DJANGO_API_URL = "{{ django_api_url }}";
+
+function fetchBooks(query = '', category = 'all', sortBy = 'newest', searching = false) {
+  const container = document.getElementById('books-container');
+  const noBooksMsg = document.getElementById('no-books-message');
+  
+  // Use the correct API endpoint for search
+  let apiUrl = query ? `${DJANGO_API_URL}/api/books/search/` : `${DJANGO_API_URL}/api/books/`;
+
+  const params = new URLSearchParams();
+  if (query) {
+    params.append('query', query);
+  }
+  if (category !== 'all') {
+    params.append('category', category);
+  }
+  params.append('sort_by', sortBy);
+
+  if (params.toString()) {
+    apiUrl += `?${params.toString()}`;
+  }
+
+  // Show loading spinner
+  container.innerHTML = `
+      <div class="col-12 text-center py-5">
+          <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Loading...</span>
+          </div>
+      </div>
+  `;
+
+  fetch(apiUrl)
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Failed to fetch books');
+      }
+      return response.json();
+    })
+    .then(booksList => {
+      if (!booksList.length) {
+        noBooksMsg.style.display = 'block';
+        container.innerHTML = '';
+        return;
+      }
+      noBooksMsg.style.display = 'none';
+      container.innerHTML = booksList.map(item => `
+        <div class="card book-card animate-fade-in${searching ? ' no-animation' : ''}">
+          <a href="/books/${item.id}/" style="display:block; width:100%; height:100%; position:relative;">
+            <div class="blog-card-image" style="background-image: url('${item.cover_image || ''}'); width:100%; height:100%; background-size:cover; background-position:center; background-color: #222;"></div>
+            <div class="blog-card-footer-overlay d-flex align-items-end" style="position:absolute; left:0; right:0; bottom:0; width:100%; height:40%; min-height:60px; background:linear-gradient(to top, rgba(0,0,0,0.90) 0%, rgba(0,0,0,0.30) 80%, rgba(0,0,0,0.0) 100%); pointer-events:none; z-index:2; display:flex; flex-direction:column; justify-content:flex-end; align-items:flex-start; padding:0 1.2rem 0.2rem 0.5rem; border-bottom-left-radius:8px; border-bottom-right-radius:8px;">
+              <div style="pointer-events:auto; width:100%;">
+                <h3 class="card-title text-primary mb-1" style="color:#fff; font-size:1.1rem; font-weight:700; margin:0 0 0.1rem 0; padding:0; line-height:1.1; text-shadow:0 2px 8px rgba(0,0,0,0.5);">${item.title}</h3>
+                <div class="text-secondary" style="color:#fff; font-size:0.97rem; line-height:1.4; text-shadow:0 2px 8px rgba(0,0,0,0.5);">${item.author}</div>
+              </div>
+            </div>
+          </a>
+        </div>
+      `).join('');
+    })
+    .catch(error => {
+      console.error('Error:', error);
+      noBooksMsg.style.display = 'block';
+      container.innerHTML = '';
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const searchInput = document.getElementById('bookSearchInput');
+  const searchButton = document.getElementById('bookSearchButton');
+  const categoryFilter = document.getElementById('bookCategoryFilter');
+  const sortFilter = document.getElementById('bookSortOrder');
+  const suggestionsDropdown = document.getElementById('bookSuggestionsDropdown');
+  
+  console.log('🔍 DOM Elements found:');
+  console.log('  - searchInput:', searchInput);
+  console.log('  - searchButton:', searchButton);
+  console.log('  - suggestionsDropdown:', suggestionsDropdown);
+  console.log('  - dropdown display:', suggestionsDropdown?.style.display);
+  console.log('  - dropdown position:', suggestionsDropdown?.style.position);
+  console.log('  - dropdown z-index:', suggestionsDropdown?.style.zIndex);
+  
+  // Additional debugging
+  const searchBox = document.querySelector('.search-box');
+  console.log('🔍 Search box element:', searchBox);
+  console.log('🔍 Search box position:', searchBox?.style.position);
+  console.log('🔍 Search box overflow:', searchBox?.style.overflow);
+  console.log('🔍 Search box height:', searchBox?.offsetHeight);
+  console.log('🔍 Search box width:', searchBox?.offsetWidth);
+  
+  // Check parent containers
+  const searchSection = document.querySelector('.search-filter-section');
+  console.log('🔍 Search section:', searchSection);
+  console.log('🔍 Search section overflow:', searchSection?.style.overflow);
+  
+  const container = document.querySelector('.container');
+  console.log('🔍 Container overflow:', container?.style.overflow);
+  
+  let searchTimeout;
+  let suggestionList = [];
+  let selectedIndex = -1;
+  
+  // Initial fetch
+  fetchBooks();
+
+  // Search button click
+  searchButton.addEventListener('click', function() {
+    fetchBooks(searchInput.value, categoryFilter.value, sortFilter.value, true);
+  });
+
+  // Search input typing
+  searchInput.addEventListener('input', function() {
+    const val = searchInput.value;
+    console.log('🔍 Search input value:', val);
+    
+    // Handle suggestions only (no automatic search)
+    if (!val) {
+      console.log('❌ Empty value, hiding suggestions');
+      suggestionsDropdown.style.display = 'none';
+      suggestionList = [];
+      selectedIndex = -1;
+    } else {
+      console.log('🔍 Fetching suggestions for:', val);
+      fetch(`/api/books/suggestions/?q=${encodeURIComponent(val)}`)
+        .then(res => res.json())
+        .then(data => {
+          console.log('✅ Suggestions received:', data);
+          suggestionList = data.suggestions || [];
+          selectedIndex = -1; // Changed from 0 to -1 so no suggestion is highlighted by default
+          showSuggestions(val);
+        })
+        .catch(err => { 
+          console.error('❌ Suggestion API error:', err); 
+        });
+    }
+    
+    // Removed automatic search on typing - search will only happen on button click or Enter key
+  });
+
+  // Category and Sort filter change
+  categoryFilter.addEventListener('change', function() {
+    fetchBooks(searchInput.value, categoryFilter.value, sortFilter.value, true);
+  });
+
+  sortFilter.addEventListener('change', function() {
+    fetchBooks(searchInput.value, categoryFilter.value, sortFilter.value, true);
+  });
+
+  // Search on Enter key and suggestions keyboard navigation
+  searchInput.addEventListener('keydown', function(e) {
+    if (suggestionList.length && (e.key === 'ArrowDown' || e.key === 'ArrowUp')) {
+      e.preventDefault();
+      if (e.key === 'ArrowDown') {
+        selectedIndex = (selectedIndex + 1) % suggestionList.length;
+      } else if (e.key === 'ArrowUp') {
+        selectedIndex = (selectedIndex - 1 + suggestionList.length) % suggestionList.length;
+      }
+      showSuggestions(searchInput.value);
+    } else if (suggestionList.length && (e.key === 'Tab' || e.key === 'ArrowRight')) {
+      if (selectedIndex >= 0 && selectedIndex < suggestionList.length) {
+        e.preventDefault();
+        searchInput.value = suggestionList[selectedIndex];
+        suggestionsDropdown.style.display = 'none';
+        suggestionList = [];
+        selectedIndex = -1;
+        searchInput.dispatchEvent(new Event('input'));
+      }
+    } else if (e.key === 'Enter') {
+      // Handle Enter key - first select highlighted suggestion if any, then search
+      if (suggestionList.length && selectedIndex >= 0 && selectedIndex < suggestionList.length) {
+        // Select the highlighted suggestion
+        searchInput.value = suggestionList[selectedIndex];
+        suggestionsDropdown.style.display = 'none';
+        suggestionList = [];
+        selectedIndex = -1;
+      }
+      // Perform search
+      clearTimeout(searchTimeout);
+      fetchBooks(searchInput.value, categoryFilter.value, sortFilter.value, true);
+    }
+  });
+
+  // Suggestions functionality
+  function highlightSuggestion(inputVal, suggestion) {
+    if (!inputVal) return suggestion;
+    if (suggestion.toLowerCase().startsWith(inputVal.toLowerCase())) {
+      const match = suggestion.slice(0, inputVal.length);
+      const rest = suggestion.slice(inputVal.length);
+      return match + '<span class="suggestion-ghost-inline">' + rest + '</span>';
+    }
+    return suggestion;
+  }
+
+  function showSuggestions(val) {
+    console.log('🎯 showSuggestions called with:', val);
+    console.log('📋 suggestionList:', suggestionList);
+    console.log('🎯 selectedIndex:', selectedIndex);
+    
+    if (!suggestionList.length || !val) {
+      console.log('❌ No suggestions or empty value, hiding dropdown');
+      suggestionsDropdown.style.display = 'none';
+      suggestionsDropdown.innerHTML = '';
+      return;
+    }
+    
+    const html = suggestionList.map((s, i) =>
+      `<div class="suggestion-item${i === selectedIndex ? ' active' : ''}" data-index="${i}">${highlightSuggestion(val, s)}</div>`
+    ).join('');
+    
+    console.log('📝 Generated HTML:', html);
+    suggestionsDropdown.innerHTML = html;
+    suggestionsDropdown.style.display = 'block';
+    console.log('✅ Dropdown should now be visible');
+  }
+
+  // Suggestions click events
+  suggestionsDropdown.addEventListener('mousedown', function(e) {
+    if (e.target.classList.contains('suggestion-item')) {
+      const idx = parseInt(e.target.getAttribute('data-index'));
+      if (!isNaN(idx)) {
+        searchInput.value = suggestionList[idx];
+        suggestionsDropdown.style.display = 'none';
+        suggestionList = [];
+        selectedIndex = -1;
+        searchInput.dispatchEvent(new Event('input'));
+      }
+    }
+  });
+
+  // Close suggestions on outside click
+  document.addEventListener('click', function(e) {
+    if (!suggestionsDropdown.contains(e.target) && e.target !== searchInput) {
+      suggestionsDropdown.style.display = 'none';
+    }
+  });
+
+  // Show suggestions on focus
+  searchInput.addEventListener('focus', function() {
+    if (suggestionList.length) showSuggestions(searchInput.value);
+  });
+});
+</script>
+{% endblock %} 

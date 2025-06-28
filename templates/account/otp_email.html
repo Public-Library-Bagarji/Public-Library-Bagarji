@@ -1,0 +1,28 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Your OTP Code - Public Library Bagarji</title>
+    <style>
+        body { font-family: 'Segoe UI', Arial, sans-serif; background: #f7f7f7; color: #222; margin: 0; padding: 0; }
+        .email-container { max-width: 500px; margin: 40px auto; background: #fff; border-radius: 12px; box-shadow: 0 2px 12px rgba(0,0,0,0.07); padding: 2rem; }
+        .logo { display: block; margin: 0 auto 1.5rem auto; height: 60px; }
+        .otp-code { font-size: 2.2rem; font-weight: bold; color: #ff6600; letter-spacing: 0.2rem; text-align: center; margin: 2rem 0; }
+        .footer { margin-top: 2.5rem; color: #888; font-size: 0.95rem; text-align: center; }
+    </style>
+</head>
+<body>
+    <div class="email-container">
+        <img src="{{ domain }}/static/images/websitemainlogo.jpg" alt="Public Library Bagarji Logo" class="logo">
+        <h2>Welcome, {{ user.username }}!</h2>
+        <p>Thank you for registering at <strong>Public Library Bagarji</strong>.</p>
+        <p>Your OTP code is:</p>
+        <div class="otp-code">{{ otp_code }}</div>
+        <p>Enter this code on the website to verify your account. This code is valid for a limited time.</p>
+        <div class="footer">
+            &copy; {{ now|date:'Y' }} Public Library Bagarji. All rights reserved.
+        </div>
+    </div>
+</body>
+</html> 

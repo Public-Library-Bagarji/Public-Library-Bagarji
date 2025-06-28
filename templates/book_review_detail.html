@@ -1,0 +1,1089 @@
+{% extends "base.html" %}
+
+{% block title %}{{ review.book_title }} - Book Review - Public Library Bagarji{% endblock %}
+
+{% block content %}
+<article class="book-review-detail-page">
+    <div class="container-fluid py-2">
+        <div class="row justify-content-center">
+            <div class="col-lg-11">
+                <div id="review-detail-container" class="book-review-detail-box" style="background: #181818; border: 2px solid var(--fire-primary); border-radius: 20px; box-shadow: 0 0 24px 0 #ff450033; margin: 1rem auto 3rem auto; padding: 2rem; position: relative;">
+            <div class="book-review-detail-title-wrapper">
+                        <h1 class="book-review-detail-title">{{ review.book.title }}</h1>
+                        <span class="review-divider-unique"></span>
+            </div>
+            {% if review.image %}
+            <div class="review-image-container" style="text-align: center; margin-bottom: 2rem;">
+                <img src="{{ review.image.url }}" alt="{{ review.book_title }}" class="review-detail-image" style="max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+            </div>
+            {% endif %}
+                    
+                    <div class="book-review-detail-meta" style="display: flex; align-items: center; gap: 2rem; color: #bbb; font-size: 1.05rem; margin-bottom: 1.2rem; justify-content: center;">
+                        <div><i class="fas fa-user-circle me-2" style="color: var(--fire-primary);"></i><strong>Reviewer:</strong> {{ review.reviewer_name }}</div>
+                        <div>
+                            <i class="fas fa-star me-2" style="color: var(--fire-primary);"></i><strong>Rating:</strong> 
+                {% for i in "12345" %}
+                    {% if forloop.counter <= review.rating %}
+                                    <i class="fas fa-star" style="color: #ff9900;"></i>
+                    {% else %}
+                                    <i class="far fa-star" style="color: #ff9900;"></i>
+                    {% endif %}
+                {% endfor %}
+                <span class="rating-number">({{ review.rating }}/5)</span>
+            </div>
+                        <div><i class="far fa-calendar me-2" style="color: var(--fire-primary);"></i><strong>Date:</strong> {{ review.review_date|date:"F d, Y" }}</div>
+                    </div>
+                    
+                    <div class="review-content" style="background: #222; border-radius: 15px; padding: 2rem; margin-bottom: 2rem; color: #ddd; line-height: 1.8;">
+                {{ review.review_text | safe }}
+                        
+                        <!-- Share Buttons Footer -->
+                        <div class="share-footer text-center" style="border-top: 1px solid #333; padding-top: 1.5rem; margin-top: 1rem;">
+                            <h4 style="font-weight: 600; font-size: 1.2rem; margin-bottom: 1rem; color: #ddd;">Share this review</h4>
+                            <div class="share-buttons d-flex justify-content-center gap-3" style="font-size: 1.3rem;">
+                                <a href="#" id="facebook-share" target="_blank" class="share-btn facebook d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; color: #1877f2; background: #fff; border-radius: 50%;"><i class="fab fa-facebook-f"></i></a>
+                                <a href="#" id="twitter-share" target="_blank" class="share-btn twitter d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; color: #1da1f2; background: #fff; border-radius: 50%;"><i class="fab fa-twitter"></i></a>
+                                <a href="#" id="linkedin-share" target="_blank" class="share-btn linkedin d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; color: #0077b5; background: #fff; border-radius: 50%;"><i class="fab fa-linkedin-in"></i></a>
+                                <a href="#" id="whatsapp-share" target="_blank" class="share-btn whatsapp d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; color: #25d366; background: #fff; border-radius: 50%;"><i class="fab fa-whatsapp"></i></a>
+            </div>
+        </div>
+        </div>
+        </div>
+
+        <!-- Comments Section -->
+        <section class="review-comments-section text-center" style="margin: 1rem auto 3rem auto; max-width: 700px;">
+            <h2 style="font-weight: 800; font-size: 2rem; margin-bottom: 1.5rem;">Leave a Comment</h2>
+            <form id="comment-form" class="mb-4">
+                <div class="mb-3">
+                    <textarea class="form-control" id="comment-text" rows="3" placeholder="Write your comment..." required></textarea>
+                </div>
+                <div class="mb-3 d-flex justify-content-center align-items-center gap-2">
+                    <span style="font-weight:600;">Your Rating:</span>
+                    <div id="star-rating" style="font-size: 1.7rem; color: #ff9900; cursor:pointer;">
+                        <i class="far fa-star" data-value="1"></i>
+                        <i class="far fa-star" data-value="2"></i>
+                        <i class="far fa-star" data-value="3"></i>
+                        <i class="far fa-star" data-value="4"></i>
+                        <i class="far fa-star" data-value="5"></i>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary px-4 py-2" style="background: var(--fire-primary); border: none;">Submit</button>
+            </form>
+            <div class="comments-container">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h3 class="comments-title" style="font-size: 1.5rem; margin: 0; color: white;">Comments</h3>
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="sort-comments">
+                            <select id="comment-sort" class="form-select form-select-sm" style="background: #222; color: white; border: 1px solid #333;">
+                                <option value="newest">Newest First</option>
+                                <option value="oldest">Oldest First</option>
+                            </select>
+                        </div>
+                        <span class="total-comments"></span>
+                    </div>
+                </div>
+                <div id="comments-list">
+                    <!-- Comments will be loaded here -->
+                </div>
+                <div id="show-more-container" class="mt-4" style="display: none;">
+                    <button id="show-more-comments" class="btn btn-outline-primary">
+                        Show More Comments <i class="fas fa-chevron-down ms-2"></i>
+                    </button>
+                </div>
+            </div>
+        </section>
+
+                <!-- Back to Book Reviews -->
+                <div class="back-to-reviews text-center" style="margin: 0 auto 3rem auto;">
+                    <a href="{% url 'book_reviews' %}" class="btn btn-secondary" style="font-size: 1rem; padding: 0.6rem 1.5rem; font-weight: 700; border-radius: 8px;">
+                        <i class="fas fa-arrow-left"></i> BACK TO ALL REVIEWS
+                    </a>
+            </div>
+        </div>
+        </div>
+    </div>
+</article>
+{% if not user.is_authenticated %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Login/Register Modal -->
+<div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 1.2rem;">
+      <div class="modal-header">
+        <h5 class="modal-title" id="authModalLabel">Login or Register Required</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center">
+        <p id="authModalMsg">You need to login or register to perform this action.</p>
+        <div class="d-flex justify-content-center gap-3 mt-3">
+          <a href="/login/?next={{ request.path }}" class="btn btn-primary">Login</a>
+          <a href="/register/?next={{ request.path }}" class="btn btn-outline-primary">Register</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function showAuthModal(msg) {
+  document.getElementById('authModalMsg').textContent = msg;
+  var modal = new bootstrap.Modal(document.getElementById('authModal'));
+  modal.show();
+}
+// Disable comment form
+const commentForm = document.getElementById('comment-form');
+if (commentForm) {
+  commentForm.classList.add('disabled');
+  commentForm.querySelectorAll('input, textarea, button').forEach(el => {
+    el.disabled = true;
+    el.addEventListener('click', function(e) {
+      e.preventDefault();
+      showAuthModal('Login or Register to comment on this review.');
+    });
+  });
+}
+</script>
+{% endif %}
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.book-review-detail-page {
+    padding: 0 0 2rem 0;
+    background: var(--light-gray);
+}
+
+.book-review-detail-box {
+    background: #181818;
+    border: 2px solid var(--fire-primary);
+    border-radius: 20px;
+    box-shadow: 0 0 24px 0 #ff450033;
+    margin: 1rem auto 3rem auto;
+    padding: 2rem;
+    position: relative;
+    transition: transform 0.3s ease;
+}
+
+.book-review-detail-box:hover {
+    transform: translateY(-5px);
+}
+
+/* Dynamic title divider styles */
+.book-review-detail-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.5px;
+    position: relative;
+    display: inline-block;
+}
+
+.book-review-detail-title-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    text-align: center;
+}
+
+.review-divider-unique {
+    display: inline-block;
+    height: 4px;
+    background: var(--fire-primary);
+    border-radius: 2px;
+    opacity: 0.7;
+    transition: width 0.3s ease;
+    position: relative;
+    vertical-align: middle;
+    margin-bottom: 1.2rem;
+}
+
+.book-review-detail-meta {
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    color: #bbb;
+    font-size: 1.05rem;
+    margin-bottom: 1.2rem;
+    justify-content: flex-start;
+}
+
+.review-content {
+    transition: background-color 0.3s ease;
+}
+
+.review-content:hover {
+    background: #2a2a2a !important;
+}
+
+.review-comments-section {
+    background: #181818;
+    border: 2px solid var(--fire-primary);
+    border-radius: 20px;
+    box-shadow: 0 0 24px 0 #ff450033;
+    padding: 2rem;
+    margin-top: 2rem;
+}
+
+.share-buttons a {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.share-buttons a:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+#star-rating i {
+    color: #fff;
+    transition: color 0.2s;
+}
+
+#star-rating i.selected {
+    color: #ff9900;
+}
+
+#star-rating i:hover,
+#star-rating i.hovered {
+    color: #ff9900;
+}
+
+.comments-container {
+    text-align: left;
+    margin-top: 2rem;
+}
+
+.comment-card {
+    background: #222;
+    border: 2px solid #cc3700;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    text-align: left;
+    transition: opacity 0.3s ease, box-shadow 0.3s;
+    position: relative;
+    box-shadow: none;
+    animation: none;
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.comment-author {
+    font-weight: 600;
+    color: #fff;
+    font-size: 1rem;
+}
+
+.comment-date {
+    color: #888;
+    font-size: 0.85rem;
+}
+
+.comment-text {
+    color: #ddd;
+    line-height: 1.6;
+    margin-bottom: 0.5rem;
+}
+
+.comment-rating {
+    color: #ff9900;
+    font-size: 0.9rem;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    .book-review-detail-page {
+        padding: 0 0 1rem 0 !important;
+    }
+    
+    .book-review-detail-box {
+        padding: 1.5rem !important;
+        margin: 0 auto 2rem auto !important;
+    }
+    
+    .book-review-detail-title {
+        font-size: 2rem !important;
+    }
+    
+.review-content {
+        padding: 1.5rem !important;
+        margin-bottom: 1.5rem !important;
+        font-size: 1rem !important;
+        line-height: 1.6 !important;
+        width: 100% !important;
+        max-width: none !important;
+    }
+    
+    .review-content h1 { font-size: 1.5rem !important; }
+    .review-content h2 { font-size: 1.3rem !important; }
+    .review-content h3 { font-size: 1.2rem !important; }
+    .review-content h4 { font-size: 1.1rem !important; }
+    .review-content h5 { font-size: 1rem !important; }
+    .review-content h6 { font-size: 0.95rem !important; }
+    
+    .share-footer h4 {
+        font-size: 1rem !important;
+        margin-bottom: 0.8rem !important;
+    }
+    
+    .share-footer .share-buttons {
+        font-size: 1.1rem !important;
+        gap: 0.5rem !important;
+    }
+    
+    .share-footer .share-btn {
+        width: 36px !important;
+        height: 36px !important;
+    }
+    
+    .review-comments-section {
+        margin: 1.5rem auto !important;
+        padding: 1.5rem !important;
+        max-width: 100% !important;
+    }
+    
+    .review-comments-section h2 {
+        font-size: 1.5rem !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    .book-review-detail-meta {
+        flex-direction: column !important;
+        gap: 0.5rem !important;
+        font-size: 0.9rem !important;
+        justify-content: flex-start !important;
+        align-items: flex-start !important;
+    }
+    
+    .back-to-reviews .btn {
+        font-size: 0.9rem !important;
+        padding: 0.5rem 1rem !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .book-review-detail-page {
+        padding: 0 0 0.5rem 0 !important;
+    }
+    
+    .book-review-detail-box {
+        padding: 1rem !important;
+        margin: 0 auto 1.5rem auto !important;
+    }
+    
+    .book-review-detail-title {
+        font-size: 1.8rem !important;
+    }
+    
+    .review-content {
+        padding: 1.2rem !important;
+        margin-bottom: 1.2rem !important;
+        font-size: 0.95rem !important;
+        line-height: 1.5 !important;
+    }
+    
+    .review-content h1 { font-size: 1.3rem !important; }
+    .review-content h2 { font-size: 1.2rem !important; }
+    .review-content h3 { font-size: 1.1rem !important; }
+    .review-content h4 { font-size: 1rem !important; }
+    .review-content h5 { font-size: 0.95rem !important; }
+    .review-content h6 { font-size: 0.9rem !important; }
+    
+    .share-footer {
+        padding-top: 1rem !important;
+        margin-top: 0.8rem !important;
+    }
+    
+    .share-footer h4 {
+        font-size: 0.9rem !important;
+        margin-bottom: 0.6rem !important;
+    }
+    
+    .share-footer .share-buttons {
+        font-size: 1rem !important;
+        gap: 0.4rem !important;
+    }
+    
+    .share-footer .share-btn {
+        width: 32px !important;
+        height: 32px !important;
+    }
+    
+    .review-comments-section {
+        margin: 1.2rem auto !important;
+        padding: 1.2rem !important;
+    }
+    
+    .review-comments-section h2 {
+        font-size: 1.3rem !important;
+        margin-bottom: 0.8rem !important;
+    }
+    
+    .book-review-detail-meta {
+        font-size: 0.85rem !important;
+        justify-content: flex-start !important;
+        align-items: flex-start !important;
+    }
+    
+    .back-to-reviews .btn {
+        font-size: 0.85rem !important;
+        padding: 0.4rem 0.8rem !important;
+    }
+}
+
+/* Animation for title divider */
+.book-review-detail-divider {
+    animation: expandDivider 1s ease-out forwards;
+}
+
+@keyframes expandDivider {
+    from { width: 0; }
+    to { width: 100px; }
+}
+
+/* Comment boxes mobile responsiveness */
+@media (max-width: 768px) {
+    .review-comments-section {
+        padding: 1.2rem !important;
+        margin-top: 1.2rem !important;
+        border-radius: 15px !important;
+    }
+    
+    .comments-container {
+        margin-top: 1.2rem !important;
+    }
+    
+    .comment-card {
+        padding: 1rem !important;
+        margin-bottom: 1rem !important;
+        border-radius: 12px !important;
+    }
+    
+    .comment-profile-img {
+        width: 44px !important;
+        height: 44px !important;
+        margin-right: 10px !important;
+    }
+    
+    .comment-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.3rem !important;
+        margin-bottom: 0.6rem !important;
+    }
+    
+    .comment-author {
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+    }
+    
+    .comment-date {
+        font-size: 0.8rem !important;
+        color: #888 !important;
+    }
+    
+    .comment-rating {
+        margin-top: 0.4rem !important;
+        font-size: 0.85rem !important;
+    }
+    
+    .comment-text {
+        font-size: 0.9rem !important;
+        line-height: 1.4 !important;
+        margin-top: 0.6rem !important;
+    }
+    
+    .comment-number {
+        width: 24px !important;
+        height: 24px !important;
+        font-size: 0.75rem !important;
+        top: -6px !important;
+        left: -6px !important;
+    }
+    
+    .comments-title {
+        font-size: 1.3rem !important;
+        margin-bottom: 0.8rem !important;
+    }
+    
+    /* Leave a Comment title responsive */
+    .review-comments-section h2 {
+        font-size: 1.4rem !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    .sort-comments select {
+        font-size: 0.8rem !important;
+        padding: 0.3rem 1.8rem 0.3rem 0.7rem !important;
+        border-radius: 12px !important;
+}
+
+.total-comments {
+        font-size: 0.8rem !important;
+        padding: 0.3rem 0.7rem !important;
+        border-radius: 12px !important;
+    }
+    
+    #show-more-comments {
+        font-size: 0.85rem !important;
+        padding: 0.5rem 1rem !important;
+        border-radius: 12px !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .review-comments-section {
+        padding: 1rem !important;
+        margin-top: 1rem !important;
+        border-radius: 12px !important;
+    }
+    
+    .comment-card {
+        padding: 0.8rem !important;
+        margin-bottom: 0.8rem !important;
+        border-radius: 10px !important;
+    }
+    
+    .comment-profile-img {
+        width: 40px !important;
+        height: 40px !important;
+        margin-right: 8px !important;
+    }
+    
+    .comment-header {
+        gap: 0.2rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .comment-author {
+        font-size: 0.9rem !important;
+    }
+    
+    .comment-date {
+        font-size: 0.75rem !important;
+    }
+    
+    .comment-rating {
+        margin-top: 0.3rem !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .comment-text {
+        font-size: 0.85rem !important;
+        line-height: 1.3 !important;
+        margin-top: 0.5rem !important;
+}
+
+.comment-number {
+        width: 22px !important;
+        height: 22px !important;
+        font-size: 0.7rem !important;
+        top: -5px !important;
+        left: -5px !important;
+}
+
+.comments-title {
+        font-size: 1.2rem !important;
+        margin-bottom: 0.7rem !important;
+    }
+    
+    /* Leave a Comment title responsive */
+    .review-comments-section h2 {
+        font-size: 1.2rem !important;
+        margin-bottom: 0.8rem !important;
+    }
+    
+    .sort-comments select {
+        font-size: 0.75rem !important;
+        padding: 0.25rem 1.5rem 0.25rem 0.6rem !important;
+        border-radius: 10px !important;
+    }
+    
+    .total-comments {
+        font-size: 0.75rem !important;
+        padding: 0.25rem 0.6rem !important;
+        border-radius: 10px !important;
+    }
+    
+    #show-more-comments {
+        font-size: 0.8rem !important;
+        padding: 0.4rem 0.8rem !important;
+        border-radius: 10px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .review-comments-section {
+        padding: 0.8rem !important;
+        margin-top: 0.8rem !important;
+    }
+    
+    .comment-card {
+        padding: 0.6rem !important;
+        margin-bottom: 0.6rem !important;
+}
+
+.comment-profile-img {
+        width: 36px !important;
+        height: 36px !important;
+        margin-right: 6px !important;
+    }
+    
+    .comment-author {
+        font-size: 0.85rem !important;
+    }
+    
+    .comment-date {
+        font-size: 0.7rem !important;
+    }
+    
+    .comment-rating {
+        font-size: 0.75rem !important;
+    }
+    
+    .comment-text {
+        font-size: 0.8rem !important;
+        line-height: 1.2 !important;
+    }
+    
+    .comments-title {
+        font-size: 1.1rem !important;
+        margin-bottom: 0.6rem !important;
+    }
+    
+    /* Leave a Comment title responsive */
+    .review-comments-section h2 {
+        font-size: 1.1rem !important;
+        margin-bottom: 0.7rem !important;
+    }
+    
+    .sort-comments select {
+        font-size: 0.7rem !important;
+        padding: 0.2rem 1.2rem 0.2rem 0.5rem !important;
+    }
+    
+    .total-comments {
+        font-size: 0.7rem !important;
+        padding: 0.2rem 0.5rem !important;
+    }
+    
+    #show-more-comments {
+        font-size: 0.75rem !important;
+        padding: 0.3rem 0.6rem !important;
+    }
+}
+
+/* No comments text color */
+.text-muted {
+    color: #87CEEB !important; /* Sky blue color */
+    font-style: italic;
+    text-align: center;
+    padding: 1rem;
+}
+
+/* Newsletter Card Responsive Styles */
+@media (max-width: 767px) {
+    .newsletter-section.card {
+        padding: 1.5rem 0.7rem !important;
+    }
+    .newsletter-title {
+        font-size: 1.3rem !important;
+    }
+    .newsletter-section p.lead {
+        font-size: 1rem !important;
+    }
+    .newsletter-form {
+        flex-direction: column !important;
+        gap: 0.7rem !important;
+        align-items: stretch !important;
+    }
+    .newsletter-form input[type="email"] {
+        font-size: 1rem !important;
+        padding: 0.7rem 1rem !important;
+        max-width: 100% !important;
+    }
+    .newsletter-form .btn.btn-primary {
+        font-size: 1rem !important;
+        padding: 0.7rem 0 !important;
+        width: 100% !important;
+    }
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const reviewId = "{{ review_id }}";
+let selectedRating = 0;
+let currentReviewTitle = '{{ review.book.title }}';
+let allComments = [];
+let currentPage = 1;
+const commentsPerPage = 3;
+let sortOrder = 'newest'; // Default sort order
+
+function animateDivider() {
+const title = document.querySelector('.book-review-detail-title');
+    const divider = document.querySelector('.review-divider-unique');
+    if (title && divider) {
+        // Wait for font to load (if not already)
+        if (document.fonts) {
+            document.fonts.ready.then(() => {
+                requestAnimationFrame(() => {
+        const titleWidth = title.offsetWidth;
+                    if (titleWidth > 0) {
+                        divider.style.transition = 'none';
+                        divider.style.width = '0';
+                        void divider.offsetWidth;
+                        divider.style.transition = 'width 0.3s cubic-bezier(0.4,0,0.2,1)';
+                        setTimeout(() => {
+        divider.style.width = titleWidth + 'px';
+                        }, 50);
+                    } else {
+                        setTimeout(animateDivider, 100);
+                    }
+                });
+            });
+        } else {
+            // Fallback if document.fonts is not supported
+            requestAnimationFrame(() => {
+                const titleWidth = title.offsetWidth;
+                if (titleWidth > 0) {
+                    divider.style.transition = 'none';
+                    divider.style.width = '0';
+                    void divider.offsetWidth;
+                    divider.style.transition = 'width 0.3s cubic-bezier(0.4,0,0.2,1)';
+                    setTimeout(() => {
+                        divider.style.width = titleWidth + 'px';
+                    }, 50);
+                } else {
+                    setTimeout(animateDivider, 100);
+                }
+            });
+        }
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(animateDivider, 200);
+});
+window.addEventListener('resize', animateDivider);
+
+// Star rating functionality
+const stars = document.querySelectorAll('#star-rating i');
+stars.forEach(star => {
+    star.addEventListener('mouseover', function() {
+        const value = this.getAttribute('data-value');
+        stars.forEach(s => {
+            if (s.getAttribute('data-value') <= value) {
+                s.classList.add('hovered');
+            } else {
+                s.classList.remove('hovered');
+            }
+        });
+    });
+
+    star.addEventListener('mouseout', function() {
+        stars.forEach(s => s.classList.remove('hovered'));
+    });
+
+    star.addEventListener('click', function() {
+        selectedRating = parseInt(this.getAttribute('data-value'));
+        stars.forEach(s => {
+            if (s.getAttribute('data-value') <= selectedRating) {
+                s.classList.add('selected');
+            } else {
+                s.classList.remove('selected');
+            }
+        });
+    });
+});
+
+// Update share buttons with the current review URL and title
+const currentUrl = window.location.href;
+const shareText = `Check out this book review: ${currentReviewTitle}`;
+
+document.getElementById('facebook-share').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`;
+document.getElementById('twitter-share').href = `https://twitter.com/intent/tweet?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(shareText)}`;
+document.getElementById('linkedin-share').href = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(currentUrl)}&title=${encodeURIComponent(currentReviewTitle)}`;
+document.getElementById('whatsapp-share').href = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + ' ' + currentUrl)}`;
+
+// Comment form submission
+document.getElementById('comment-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+    const text = document.getElementById('comment-text').value.trim();
+    if (!text || selectedRating === 0) {
+        alert('Please fill all fields and select a rating.');
+        return;
+    }
+    fetch(`http://127.0.0.1:8000/api/bookreviews/${reviewId}/comments/`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            comment: text,
+            rating: selectedRating
+        }),
+        credentials: 'include'
+    })
+    .then(res => {
+        if (!res.ok) throw new Error('Failed to submit comment');
+        return res.json();
+    })
+    .then(() => {
+        this.reset();
+        selectedRating = 0;
+        stars.forEach(s => s.classList.remove('selected'));
+        loadComments();
+    })
+    .catch(() => alert('Failed to submit comment. Please try again.'));
+});
+
+function sortComments() {
+    const sortSelect = document.getElementById('comment-sort');
+    sortOrder = sortSelect.value;
+    
+    // Sort the comments array
+    allComments.sort((a, b) => {
+        const dateA = new Date(a.date);
+        const dateB = new Date(b.date);
+        return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+    });
+    
+    // Reset to first page and redisplay
+    currentPage = 1;
+    displayComments();
+}
+
+function displayComments() {
+    const commentsList = document.getElementById('comments-list');
+    const showMoreContainer = document.getElementById('show-more-container');
+    const totalComments = document.querySelector('.total-comments');
+    
+    if (!allComments.length) {
+        commentsList.innerHTML = '<p class="text-muted">No comments yet. Be the first to comment!</p>';
+        showMoreContainer.style.display = 'none';
+        totalComments.textContent = '';
+      return;
+    }
+
+    // Update total comments count
+    totalComments.textContent = `${allComments.length} ${allComments.length === 1 ? 'Comment' : 'Comments'}`;
+
+    // Calculate which comments to show
+    const startIndex = 0;
+    const endIndex = currentPage * commentsPerPage;
+    const commentsToShow = allComments.slice(startIndex, endIndex);
+
+    // Generate HTML for visible comments
+    commentsList.innerHTML = commentsToShow.map((comment, index) => {
+    let starsHtml = '';
+        const rating = parseInt(comment.rating); // Ensure rating is a number
+    for (let i = 0; i < 5; i++) {
+            if (i < rating) {
+        starsHtml += '<i class="fas fa-star"></i>';
+      } else {
+        starsHtml += '<i class="far fa-star"></i>';
+      }
+    }
+        // Calculate comment number based on sort order
+        const commentNumber = sortOrder === 'newest' ? 
+            allComments.length - index : 
+            index + 1;
+        let repliesHtml = '';
+        if (comment.replies && comment.replies.length) {
+            repliesHtml = comment.replies.map(r =>
+                `<div class=\"admin-reply-bubble mt-2\" style=\"display:flex;align-items:flex-start;gap:10px;margin-bottom:6px;\">\n        <img src=\"${r.admin_image}\" class=\"admin-avatar\" style=\"width:36px;height:36px;border-radius:50%;border:2px solid #ff9900;object-fit:cover;background:#fff;\" alt=\"Library Logo\" />\n        <div class=\"admin-reply-content\" style=\"background:#232323;color:#ff9900;border-radius:10px;padding:8px 14px;min-width:80px;\">
+            <div style=\"font-weight:600;font-size:1rem;\"><i class='fas fa-user-shield'></i> Admin Reply</div>
+            <div style=\"white-space:pre-line;color:#fff;\">${r.reply}</div>
+            <div style=\"font-size:0.9rem;color:#aaa;\">${r.date ? r.date : ''}</div>\n        </div>\n    </div>`
+            ).join('');
+        }
+        let commentHtml = `<div class="comment-card ${index >= endIndex ? 'hidden' : ''}" id="comment-card-${comment.id}">
+            <div style="display:flex;align-items:center;gap:18px;">
+                <img src="${comment.profile_image}" class="comment-profile-img" alt="Profile" />
+                <div style="flex:1;">
+                    <div class="comment-header" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                    <span class="comment-author">${comment.name}</span>
+                        <span class="comment-date" style="color:#cc3700;font-size:0.98rem;font-weight:500;">${comment.date}</span>
+                    </div>
+                    <div class="comment-rating">${starsHtml}</div>
+                    <div class="comment-body" id="comment-text-${comment.id}">${comment.comment}</div>
+                </div>
+                ${comment.is_owner ? `<button class='btn btn-warning btn-sm edit-comment-btn' onclick='startEditComment(${comment.id})' style='border-radius:6px;font-weight:600;padding:0.2rem 0.7rem;'><i class='fas fa-edit'></i> Edit</button>` : ''}
+            </div>
+            ${repliesHtml}
+        </div>`;
+        return commentHtml;
+    }).join('');
+
+    // Show/hide the "Show More" button
+    showMoreContainer.style.display = endIndex < allComments.length ? 'block' : 'none';
+}
+
+function loadComments() {
+    fetch(`http://127.0.0.1:8000/api/bookreviews/${reviewId}/comments/`, {
+        credentials: 'include'
+    })
+        .then(response => response.json())
+        .then(comments => {
+            allComments = comments;
+            sortComments(); // Initial sort
+        })
+        .catch(error => {
+            console.error('Error loading comments:', error);
+            document.getElementById('comments-list').innerHTML = 
+                '<p class="text-danger">Error loading comments. Please try again later.</p>';
+        });
+}
+
+// Add event listener for sort change
+const sortSelect = document.getElementById('comment-sort');
+if (sortSelect) {
+    sortSelect.addEventListener('change', sortComments);
+}
+
+// Add event listener for show more button
+document.getElementById('show-more-comments').addEventListener('click', function() {
+    currentPage++;
+    displayComments();
+});
+
+// Load comments when page loads
+document.addEventListener('DOMContentLoaded', loadComments);
+
+// Remove the deleteComment function and add edit logic
+window.startEditComment = function(commentId) {
+    const commentObj = allComments.find(c => c.id === commentId);
+    if (!commentObj) return;
+    const card = document.getElementById(`comment-card-${commentId}`);
+    const commentTextDiv = document.getElementById(`comment-text-${commentId}`);
+    // Stars UI for edit
+    let starsHtml = '<div id="edit-star-rating-' + commentId + '" style="font-size: 1.5rem; color: #ff9900; cursor:pointer; margin-bottom:8px;">';
+    for (let i = 1; i <= 5; i++) {
+        starsHtml += `<i class="fa${i <= commentObj.rating ? 's' : 'r'} fa-star edit-star" data-value="${i}"></i>`;
+    }
+    starsHtml += '</div>';
+    commentTextDiv.innerHTML = `
+        <textarea id="edit-comment-input-${commentId}" class="form-control mb-2" rows="2">${commentObj.comment.replace(/"/g, '&quot;')}</textarea>
+        ${starsHtml}
+        <div class="d-flex gap-2">
+            <button class="btn btn-success btn-sm" onclick="saveEditComment(${commentId})">Save</button>
+            <button class="btn btn-secondary btn-sm" onclick="cancelEditComment(${commentId})">Cancel</button>
+            <span id="edit-error-${commentId}" class="text-danger ms-2" style="font-size:0.95em;"></span>
+        </div>
+    `;
+    // Star click logic
+    let selectedEditRating = commentObj.rating;
+    const starEls = commentTextDiv.querySelectorAll('.edit-star');
+    starEls.forEach(star => {
+        star.addEventListener('mouseover', function() {
+            const value = parseInt(this.getAttribute('data-value'));
+            starEls.forEach(s => {
+                if (parseInt(s.getAttribute('data-value')) <= value) {
+                    s.classList.add('selected');
+                } else {
+                    s.classList.remove('selected');
+                }
+            });
+        });
+        star.addEventListener('mouseout', function() {
+            starEls.forEach((s, idx) => {
+                if (idx < selectedEditRating) {
+                    s.classList.add('selected');
+                } else {
+                    s.classList.remove('selected');
+                }
+            });
+        });
+        star.addEventListener('click', function() {
+            selectedEditRating = parseInt(this.getAttribute('data-value'));
+            starEls.forEach((s, idx) => {
+                if (idx < selectedEditRating) {
+                    s.classList.add('selected');
+                } else {
+                    s.classList.remove('selected');
+                }
+            });
+        });
+    });
+    // Save selected rating to element for access in saveEditComment
+    card.dataset.selectedEditRating = selectedEditRating;
+};
+window.cancelEditComment = function(commentId) {
+    // Restore original comment text
+    const commentObj = allComments.find(c => c.id === commentId);
+    if (!commentObj) return;
+    const commentTextDiv = document.getElementById(`comment-text-${commentId}`);
+    commentTextDiv.innerHTML = commentObj.comment;
+};
+window.saveEditComment = function(commentId) {
+    const commentObj = allComments.find(c => c.id === commentId);
+    if (!commentObj) return;
+    const input = document.getElementById(`edit-comment-input-${commentId}`);
+    const newText = input.value.trim();
+    const card = document.getElementById(`comment-card-${commentId}`);
+    let selectedEditRating = card.dataset.selectedEditRating ? parseInt(card.dataset.selectedEditRating) : commentObj.rating;
+    // Get latest selected rating from stars
+    const starEls = card.querySelectorAll('.edit-star.selected');
+    selectedEditRating = starEls.length;
+    const errorSpan = document.getElementById(`edit-error-${commentId}`);
+    if (!newText) {
+        errorSpan.textContent = 'Comment cannot be empty.';
+        return;
+    }
+    if (!selectedEditRating) {
+        errorSpan.textContent = 'Please select a rating.';
+        return;
+    }
+    if (newText === commentObj.comment.trim() && selectedEditRating === commentObj.rating) {
+        errorSpan.textContent = 'You must change the comment or rating.';
+        return;
+    }
+    // PATCH request
+    fetch(`http://127.0.0.1:8000/api/bookreviews/${reviewId}/comments/`, {
+        method: 'PATCH',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            id: commentId,
+            comment: newText,
+            rating: selectedEditRating
+        }),
+        credentials: 'include'
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            loadComments();
+        } else {
+            errorSpan.textContent = data.error || 'Failed to update comment.';
+        }
+  })
+  .catch(() => {
+        errorSpan.textContent = 'Failed to update comment.';
+  });
+};
+
+document.addEventListener('DOMContentLoaded', function() {
+    const title = document.querySelector('.book-review-detail-title');
+    const divider = document.querySelector('.review-divider-unique');
+    function updateDividerWidth() {
+        if (title && divider) {
+            divider.style.display = 'inline-block';
+            divider.style.width = title.offsetWidth + 'px';
+        }
+    }
+    updateDividerWidth();
+    window.addEventListener('resize', updateDividerWidth);
+});
+</script>
+{% endblock %} 

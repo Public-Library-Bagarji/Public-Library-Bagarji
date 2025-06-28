@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block content %}
+<div class="container d-flex align-items-center justify-content-center min-vh-100">
+  <div class="card shadow p-4" style="max-width: 400px; width: 100%;">
+    <div class="text-center mb-4">
+      <img src="{% static 'images/websitemainlogo.jpg' %}" alt="Public Library Bagarji Logo" style="height: 150px;">
+      <h3 class="mt-2 mb-0">Sign In</h3>
+    </div>
+    {% if messages %}
+      {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+      {% endfor %}
+    {% endif %}
+    <form method="post" action="{% url 'login' %}">
+      {% csrf_token %}
+      <div class="mb-3">
+        <label for="id_username" class="form-label" style="color: #fff;">Email or Username</label>
+        <input type="text" class="form-control" id="id_username" name="username" required autofocus style="background-color: #fff;">
+      </div>
+      <div class="mb-3">
+        <label for="id_password" class="form-label" style="color: #fff;">Password</label>
+        <input type="password" class="form-control" id="id_password" name="password" required style="background-color: #fff;">
+      </div>
+      {% if form.non_field_errors %}
+        <div class="alert alert-danger">
+          {% for error in form.non_field_errors %}
+            {{ error }}
+          {% endfor %}
+        </div>
+      {% endif %}
+      <button type="submit" class="btn btn-primary w-100">Login</button>
+    </form>
+    <div class="d-flex justify-content-between">
+      <a href="#">Forgot password?</a>
+      <a href="{% url 'register' %}">Register</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_head %}
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+{% endblock %} 

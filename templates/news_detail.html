@@ -1,0 +1,1018 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}{{ news.title }} - Public Library Bagarji{% endblock %}
+
+{% block content %}
+<article class="news-detail">
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-lg-11">
+                <div class="news-detail-box" style="background: #181818; border: 2px solid var(--fire-primary); border-radius: 20px; box-shadow: 0 0 24px 0 #ff450033; padding: 2rem; margin: 1rem auto 3rem auto; position: relative; transition: transform 0.3s ease;">
+                    <div class="news-detail-title-wrapper">
+                        <h1 class="news-detail-title">{{ news.title }}</h1>
+                        <div class="news-detail-divider"></div>
+                    </div>
+                    {% if news.image %}
+                    <div class="news-image-container" style="text-align: center; margin-bottom: 2rem;">
+                        <img src="{{ news.image.url }}" alt="{{ news.title }}" class="news-detail-image" style="max-width: 100%; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.2);">
+                    </div>
+                    {% endif %}
+                    <div class="news-detail-meta" style="display: flex; align-items: center; gap: 2rem; color: #bbb; font-size: 1.05rem; margin-bottom: 1.2rem; justify-content: center;">
+                        <div><i class="far fa-calendar me-2" style="color: var(--fire-primary);"></i><strong>Date:</strong> {{ news.publication_date|date:"F d, Y" }}</div>
+                        {% if news.category %}<div><i class="fas fa-folder me-2" style="color: var(--fire-primary);"></i><strong>Category:</strong> {{ news.category|title }}</div>{% endif %}
+                    </div>
+                    <div class="news-detail-content" style="background: #222; border-radius: 15px; padding: 2rem; margin-bottom: 2rem; color: #ddd; line-height: 1.8;">
+                        {{ news.content | safe }}
+                        
+                        <!-- Share Buttons Footer -->
+                        <div class="share-footer text-center" style="border-top: 1px solid #333; padding-top: 1.5rem; margin-top: 1rem;">
+                            <h4 style="font-weight: 600; font-size: 1.2rem; margin-bottom: 1rem; color: #ddd;">Share this news</h4>
+                            <div class="share-buttons d-flex justify-content-center gap-3" style="font-size: 1.3rem;">
+                                <a href="#" id="facebook-share" target="_blank" class="share-btn facebook d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; color: #1877f2; background: #fff; border-radius: 50%;"><i class="fab fa-facebook-f"></i></a>
+                                <a href="#" id="twitter-share" target="_blank" class="share-btn twitter d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; color: #1da1f2; background: #fff; border-radius: 50%;"><i class="fab fa-twitter"></i></a>
+                                <a href="#" id="linkedin-share" target="_blank" class="share-btn linkedin d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; color: #0077b5; background: #fff; border-radius: 50%;"><i class="fab fa-linkedin-in"></i></a>
+                                <a href="#" id="whatsapp-share" target="_blank" class="share-btn whatsapp d-flex align-items-center justify-content-center" style="width: 42px; height: 42px; color: #25d366; background: #fff; border-radius: 50%;"><i class="fab fa-whatsapp"></i></a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comment Section -->
+                <section class="news-comments-section text-center" style="margin: 0.5rem auto 2rem auto; padding: 1.5rem;">
+                    <h2 style="font-weight: 800; font-size: 2rem; margin-bottom: 1.5rem;">Leave a Comment</h2>
+                    <form id="comment-form" class="mb-4">
+                        <div class="mb-3">
+                            <textarea class="form-control" id="comment-text" rows="3" placeholder="Write your comment..." required></textarea>
+                        </div>
+                        <div class="mb-3 d-flex justify-content-center align-items-center gap-2">
+                            <span style="font-weight:600;">Your Rating:</span>
+                            <div id="star-rating" style="font-size: 1.7rem; color: #ff9900; cursor:pointer;">
+                                <i class="far fa-star" data-value="1"></i>
+                                <i class="far fa-star" data-value="2"></i>
+                                <i class="far fa-star" data-value="3"></i>
+                                <i class="far fa-star" data-value="4"></i>
+                                <i class="far fa-star" data-value="5"></i>
+                            </div>
+                        </div>
+                        <button type="submit" class="btn btn-primary px-4 py-2" style="background: var(--fire-primary); border: none;">Submit</button>
+                    </form>
+                    <div class="comments-container">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3 class="comments-title" style="font-size: 1.5rem; margin: 0; color: white;">Comments</h3>
+                            <div class="d-flex align-items-center gap-3">
+                                <div class="sort-comments">
+                                    <select id="comment-sort" class="form-select form-select-sm" style="background: #222; color: white; border: 1px solid #333;">
+                                        <option value="newest">Newest First</option>
+                                        <option value="oldest">Oldest First</option>
+                                    </select>
+                                </div>
+                                <span class="total-comments"></span>
+                            </div>
+                        </div>
+                        <div id="comments-list">
+                            <!-- Comments will be loaded here -->
+                        </div>
+                        <div id="show-more-container" class="mt-4" style="display: none;">
+                            <button id="show-more-comments" class="btn btn-outline-primary">
+                                Show More Comments <i class="fas fa-chevron-down ms-2"></i>
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- Back to News -->
+                <div class="back-to-news text-center" style="margin: 0 auto 3rem auto;">
+                    <a href="{% url 'news' %}" class="btn btn-secondary" style="font-size: 1rem; padding: 0.8rem 2rem; font-weight: 700; border-radius: 8px; background: #333; border: none;">
+                        <i class="fas fa-arrow-left me-2"></i> BACK TO ALL NEWS
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</article>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.news-detail-box {
+    transition: transform 0.3s ease;
+}
+
+.news-detail-box:hover {
+    transform: translateY(-5px);
+}
+
+/* Dynamic title divider styles */
+.news-detail-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.8rem;
+    font-weight: 800;
+    color: var(--primary-color);
+    text-align: center;
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.5px;
+    position: relative;
+    display: inline-block;
+}
+
+.news-detail-title-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+    text-align: center;
+}
+
+.news-detail-divider {
+    width: 0;
+    height: 4px;
+    background: var(--fire-primary);
+    border-radius: 2px;
+    margin: 0.5rem auto 1.5rem auto;
+    opacity: 0.7;
+    transition: width 0.3s ease;
+    position: relative;
+}
+
+.news-detail-divider::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 100%;
+    background: var(--fire-primary);
+    border-radius: 2px;
+    width: 100%;
+}
+
+.news-detail-content {
+    transition: background-color 0.3s ease;
+}
+
+.news-detail-content:hover {
+    background: #2a2a2a !important;
+}
+
+.news-image-container img {
+    transition: transform 0.3s ease;
+}
+
+.news-image-container img:hover {
+    transform: scale(1.02);
+}
+
+.share-buttons a {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.share-buttons a:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+#star-rating i {
+    color: #fff;
+    transition: color 0.2s;
+}
+
+#star-rating i.selected {
+    color: #ff9900;
+}
+
+#star-rating i:hover,
+#star-rating i.hovered {
+    color: #ff9900;
+}
+
+.comment-card {
+    background: #222;
+    border: 2px solid #cc3700;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    text-align: left;
+    transition: opacity 0.3s ease, box-shadow 0.3s;
+    position: relative;
+    box-shadow: none;
+    animation: none;
+}
+
+.comment-profile-img {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: #fff;
+    margin-right: 18px;
+    border: 2px solid #cc3700;
+    box-shadow: none;
+    animation: none;
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.comment-author {
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+.comment-date {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.comment-body {
+    color: #ddd;
+    line-height: 1.6;
+    margin-bottom: 0.5rem;
+}
+
+.comment-rating {
+    color: inherit;
+}
+
+.comment-rating .fas.fa-star {
+    color: #ff9900;
+}
+.comment-rating .far.fa-star {
+    color: #fff;
+}
+
+.news-comments-section {
+    background: #181818;
+    border: 2px solid var(--fire-primary);
+    border-radius: 20px;
+    box-shadow: 0 0 24px 0 #ff450033;
+    padding: 2rem;
+    margin: 2rem auto;
+    max-width: 800px;
+    width: 100%;
+}
+
+.comments-container {
+    text-align: left;
+    margin-top: 2rem;
+}
+
+.comment-card.hidden {
+    display: none;
+}
+
+#show-more-comments {
+    color: white !important;
+    border-color: var(--fire-primary) !important;
+    background: transparent;
+    transition: all 0.3s ease;
+}
+
+#show-more-comments:hover {
+    background: var(--fire-primary) !important;
+    color: white !important;
+    border-color: var(--fire-primary) !important;
+    transform: translateY(-2px);
+}
+
+#show-more-comments i {
+    color: white !important;
+    transition: transform 0.3s ease;
+}
+
+#show-more-comments:hover i {
+    transform: translateY(2px);
+}
+
+.sort-comments select {
+    background: #222 !important;
+    color: white !important;
+    border: 1px solid #333 !important;
+    padding: 0.3rem 2.5rem 0.3rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: center;
+    text-align-last: center;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='white'%3e%3cpath d='M7 10l5 5 5-5z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    background-size: 1.2em;
+    padding-right: 2.5rem;
+}
+
+.sort-comments select option {
+    text-align: center;
+    background: #222;
+    color: white;
+}
+
+.sort-comments select:hover {
+    border-color: var(--fire-primary) !important;
+}
+
+.sort-comments select:focus {
+    box-shadow: 0 0 0 2px rgba(255, 120, 0, 0.2);
+    border-color: var(--fire-primary) !important;
+}
+
+.total-comments {
+    color: white !important;
+    font-size: 0.9rem;
+    background: rgba(255, 120, 0, 0.1);
+    padding: 0.3rem 0.8rem;
+    border-radius: 20px;
+    border: 1px solid var(--fire-primary);
+}
+
+.comment-number {
+    position: absolute;
+    top: -10px;
+    left: -10px;
+    background: var(--fire-primary);
+    color: white;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.comments-title {
+    color: white !important;
+    font-weight: 600;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.edit-star {
+    color: #fff !important;
+    transition: color 0.2s;
+}
+.edit-star.selected {
+    color: #ff9900 !important;
+}
+
+.share-footer .share-btn {
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.share-footer .share-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    .news-detail-box {
+        padding: 1.5rem !important;
+        margin: 0.5rem auto 2rem auto !important;
+    }
+    
+    .news-detail-title {
+        font-size: 2rem !important;
+    }
+    
+    .news-detail-content {
+        padding: 1.5rem !important;
+        margin-bottom: 1.5rem !important;
+        font-size: 1rem !important;
+        line-height: 1.6 !important;
+        width: 100% !important;
+        max-width: none !important;
+    }
+    
+    .news-image-container img {
+        max-width: 100% !important;
+        height: auto !important;
+    }
+    
+    .news-comments-section {
+        padding: 1.2rem !important;
+        margin-top: 1.2rem !important;
+        border-radius: 15px !important;
+    }
+    
+    .comments-container {
+        margin-top: 1.2rem !important;
+    }
+    
+    .comment-card {
+        padding: 1rem !important;
+        margin-bottom: 1rem !important;
+        border-radius: 12px !important;
+    }
+    
+    .comment-profile-img {
+        width: 44px !important;
+        height: 44px !important;
+        margin-right: 10px !important;
+    }
+    
+    .comment-header {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 0.3rem !important;
+        margin-bottom: 0.6rem !important;
+    }
+    
+    .comment-author {
+        font-size: 0.95rem !important;
+        font-weight: 600 !important;
+    }
+    
+    .comment-date {
+        font-size: 0.8rem !important;
+        color: #888 !important;
+    }
+    
+    .comment-rating {
+        margin-top: 0.4rem !important;
+        font-size: 0.85rem !important;
+    }
+    
+    .comment-text {
+        font-size: 0.9rem !important;
+        line-height: 1.4 !important;
+        margin-top: 0.6rem !important;
+    }
+    
+    .comment-number {
+        width: 24px !important;
+        height: 24px !important;
+        font-size: 0.75rem !important;
+        top: -6px !important;
+        left: -6px !important;
+    }
+    
+    .comments-title {
+        font-size: 1.3rem !important;
+        margin-bottom: 0.8rem !important;
+    }
+    
+    /* Leave a Comment title responsive */
+    .news-comments-section h2 {
+        font-size: 1.4rem !important;
+        margin-bottom: 1rem !important;
+    }
+    
+    .sort-comments select {
+        font-size: 0.8rem !important;
+        padding: 0.3rem 1.8rem 0.3rem 0.7rem !important;
+        border-radius: 12px !important;
+    }
+    
+    .total-comments {
+        font-size: 0.8rem !important;
+        padding: 0.3rem 0.7rem !important;
+        border-radius: 12px !important;
+    }
+    
+    #show-more-comments {
+        font-size: 0.85rem !important;
+        padding: 0.5rem 1rem !important;
+        border-radius: 12px !important;
+    }
+}
+
+@media (max-width: 576px) {
+    .news-detail-box {
+        padding: 1rem !important;
+        margin: 0 auto 1.5rem auto !important;
+    }
+    
+    .news-detail-title {
+        font-size: 1.8rem !important;
+    }
+    
+    .news-detail-content {
+        padding: 1.2rem !important;
+        margin-bottom: 1.2rem !important;
+        font-size: 0.95rem !important;
+        line-height: 1.5 !important;
+    }
+    
+    .news-comments-section {
+        padding: 1rem !important;
+        margin-top: 1rem !important;
+        border-radius: 12px !important;
+    }
+    
+    .comment-card {
+        padding: 0.8rem !important;
+        margin-bottom: 0.8rem !important;
+        border-radius: 10px !important;
+    }
+    
+    .comment-profile-img {
+        width: 40px !important;
+        height: 40px !important;
+        margin-right: 8px !important;
+    }
+    
+    .comment-header {
+        gap: 0.2rem !important;
+        margin-bottom: 0.5rem !important;
+    }
+    
+    .comment-author {
+        font-size: 0.9rem !important;
+    }
+    
+    .comment-date {
+        font-size: 0.75rem !important;
+    }
+    
+    .comment-rating {
+        margin-top: 0.3rem !important;
+        font-size: 0.8rem !important;
+    }
+    
+    .comment-text {
+        font-size: 0.85rem !important;
+        line-height: 1.4 !important;
+        margin-top: 0.5rem !important;
+    }
+    
+    .comment-number {
+        width: 22px !important;
+        height: 22px !important;
+        font-size: 0.7rem !important;
+        top: -5px !important;
+        left: -5px !important;
+    }
+    
+    .comments-title {
+        font-size: 1.2rem !important;
+        margin-bottom: 0.7rem !important;
+    }
+    
+    /* Leave a Comment title responsive */
+    .news-comments-section h2 {
+        font-size: 1.2rem !important;
+        margin-bottom: 0.8rem !important;
+    }
+    
+    .sort-comments select {
+        font-size: 0.75rem !important;
+        padding: 0.25rem 1.5rem 0.25rem 0.6rem !important;
+        border-radius: 10px !important;
+    }
+    
+    .total-comments {
+        font-size: 0.75rem !important;
+        padding: 0.25rem 0.6rem !important;
+        border-radius: 10px !important;
+    }
+    
+    #show-more-comments {
+        font-size: 0.8rem !important;
+        padding: 0.4rem 0.8rem !important;
+        border-radius: 10px !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .news-comments-section {
+        padding: 0.8rem !important;
+        margin-top: 0.8rem !important;
+    }
+    
+    .comment-card {
+        padding: 0.6rem !important;
+        margin-bottom: 0.6rem !important;
+    }
+    
+    .comment-profile-img {
+        width: 36px !important;
+        height: 36px !important;
+        margin-right: 6px !important;
+    }
+    
+    .comment-author {
+        font-size: 0.85rem !important;
+    }
+    
+    .comment-date {
+        font-size: 0.7rem !important;
+    }
+    
+    .comment-rating {
+        font-size: 0.75rem !important;
+    }
+    
+    .comment-text {
+        font-size: 0.8rem !important;
+        line-height: 1.2 !important;
+    }
+    
+    .comments-title {
+        font-size: 1.1rem !important;
+        margin-bottom: 0.6rem !important;
+    }
+    
+    /* Leave a Comment title responsive */
+    .news-comments-section h2 {
+        font-size: 1.1rem !important;
+        margin-bottom: 0.7rem !important;
+    }
+    
+    .sort-comments select {
+        font-size: 0.7rem !important;
+        padding: 0.2rem 1.2rem 0.2rem 0.5rem !important;
+    }
+    
+    .total-comments {
+        font-size: 0.7rem !important;
+        padding: 0.2rem 0.5rem !important;
+    }
+    
+    #show-more-comments {
+        font-size: 0.75rem !important;
+        padding: 0.3rem 0.6rem !important;
+    }
+}
+
+/* No comments text color */
+.text-muted {
+    color: #87CEEB !important; /* Sky blue color */
+    font-style: italic;
+    text-align: center;
+    padding: 1rem;
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const newsId = "{{ news.id }}";
+    let selectedRating = 0;
+    let allComments = [];
+    let currentPage = 1;
+    const commentsPerPage = 3;
+    let sortOrder = 'newest'; // Default sort order
+
+    // Set divider width to match title width
+    const title = document.querySelector('.news-detail-title');
+    const divider = document.querySelector('.news-detail-divider');
+    
+    function updateDividerWidth() {
+        if (title && divider) {
+            const titleWidth = title.offsetWidth;
+            divider.style.width = titleWidth + 'px';
+        }
+    }
+    
+    // Update on page load
+    updateDividerWidth();
+    
+    // Update on window resize
+    window.addEventListener('resize', updateDividerWidth);
+
+    // Star rating functionality
+    const stars = document.querySelectorAll('#star-rating i');
+    stars.forEach(star => {
+        star.addEventListener('mouseover', function() {
+            const value = this.getAttribute('data-value');
+            stars.forEach(s => {
+                if (s.getAttribute('data-value') <= value) {
+                    s.classList.add('hovered');
+                } else {
+                    s.classList.remove('hovered');
+    }
+            });
+        });
+
+        star.addEventListener('mouseout', function() {
+            stars.forEach(s => s.classList.remove('hovered'));
+        });
+
+        star.addEventListener('click', function() {
+            selectedRating = parseInt(this.getAttribute('data-value'));
+            stars.forEach(s => {
+                if (s.getAttribute('data-value') <= selectedRating) {
+                    s.classList.add('selected');
+                } else {
+                    s.classList.remove('selected');
+                }
+            });
+        });
+    });
+
+    // Comment form submission
+    document.getElementById('comment-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const text = document.getElementById('comment-text').value.trim();
+        if (!text || selectedRating === 0) {
+            alert('Please fill all fields and select a rating.');
+      return;
+    }
+        fetch(`http://127.0.0.1:8000/api/news/${newsId}/comments/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                comment: text,
+                rating: selectedRating
+            }),
+            credentials: 'include'
+        })
+        .then(res => {
+            if (!res.ok) throw new Error('Failed to submit comment');
+            return res.json();
+        })
+        .then(() => {
+            this.reset();
+            selectedRating = 0;
+            stars.forEach(s => s.classList.remove('selected'));
+            loadComments();
+        })
+        .catch(() => alert('Failed to submit comment. Please try again.'));
+    });
+
+    function sortComments() {
+        const sortSelect = document.getElementById('comment-sort');
+        sortOrder = sortSelect.value;
+        
+        // Sort the comments array
+        allComments.sort((a, b) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+        });
+        
+        // Reset to first page and redisplay
+        currentPage = 1;
+        displayComments();
+    }
+
+    function displayComments() {
+        const commentsList = document.getElementById('comments-list');
+        const showMoreContainer = document.getElementById('show-more-container');
+        const totalComments = document.querySelector('.total-comments');
+        
+        if (!allComments.length) {
+            commentsList.innerHTML = '<p class="text-muted">No comments yet. Be the first to comment!</p>';
+            showMoreContainer.style.display = 'none';
+            totalComments.textContent = '';
+            return;
+        }
+
+        // Update total comments count
+        totalComments.textContent = `${allComments.length} ${allComments.length === 1 ? 'Comment' : 'Comments'}`;
+
+        // Calculate which comments to show
+        const startIndex = 0;
+        const endIndex = currentPage * commentsPerPage;
+        const commentsToShow = allComments.slice(startIndex, endIndex);
+
+        // Generate HTML for visible comments
+        commentsList.innerHTML = allComments.map((comment, index) => {
+            let starsHtml = '';
+            const rating = parseInt(comment.rating); // Ensure rating is a number
+            for (let i = 0; i < 5; i++) {
+                if (i < rating) {
+                    starsHtml += '<i class="fas fa-star"></i>';
+                } else {
+                    starsHtml += '<i class="far fa-star"></i>';
+                }
+            }
+            // Calculate comment number based on sort order
+            const commentNumber = sortOrder === 'newest' ? 
+                allComments.length - index : 
+                index + 1;
+            let repliesHtml = '';
+            if (comment.replies && comment.replies.length) {
+                repliesHtml = comment.replies.map(r =>
+                    `<div class=\"admin-reply-bubble mt-2\" style=\"display:flex;align-items:flex-start;gap:10px;margin-bottom:6px;\">\n        <img src=\"${r.admin_image}\" class=\"admin-avatar\" style=\"width:36px;height:36px;border-radius:50%;border:2px solid #ff9900;object-fit:cover;background:#fff;\" alt=\"Library Logo\" />\n        <div class=\"admin-reply-content\" style=\"background:#232323;color:#ff9900;border-radius:10px;padding:8px 14px;min-width:80px;\">\n            <div style=\"font-weight:600;font-size:1rem;\"><i class='fas fa-user-shield'></i> Admin Reply</div>\n            <div style=\"white-space:pre-line;color:#fff;\">${r.reply}</div>\n            <div style=\"font-size:0.9rem;color:#aaa;\">${r.date ? r.date : ''}</div>\n        </div>\n    </div>`
+                ).join('');
+            }
+            let commentHtml = `<div class="comment-card ${index >= endIndex ? 'hidden' : ''}" id="comment-card-${comment.id}">
+                <div style="display:flex;align-items:center;gap:18px;">
+                    <img src="${comment.profile_image}" class="comment-profile-img" alt="Profile" />
+                    <div style="flex:1;">
+                        <div class="comment-header" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+                        <span class="comment-author">${comment.name}</span>
+                            <span class="comment-date" style="color:#cc3700;font-size:0.98rem;font-weight:500;">${comment.date}</span>
+      </div>
+                    <div class="comment-rating">${starsHtml}</div>
+                        <div class="comment-body" id="comment-text-${comment.id}">${comment.comment}</div>
+                    </div>
+                    ${comment.is_owner ? `<button class='btn btn-warning btn-sm edit-comment-btn' onclick='startEditComment(${comment.id})' style='border-radius:6px;font-weight:600;padding:0.2rem 0.7rem;'><i class='fas fa-edit'></i> Edit</button>` : ''}
+                </div>
+                    ${repliesHtml}
+            </div>`;
+            return commentHtml;
+        }).join('');
+
+        // Show/hide the "Show More" button
+        showMoreContainer.style.display = endIndex < allComments.length ? 'block' : 'none';
+    }
+
+    function loadComments() {
+        fetch(`http://127.0.0.1:8000/api/news/${newsId}/comments/`, {
+            credentials: 'include'
+        })
+            .then(response => response.json())
+            .then(comments => {
+                allComments = comments;
+                sortComments(); // Initial sort
+  })
+  .catch(error => {
+                console.error('Error loading comments:', error);
+                document.getElementById('comments-list').innerHTML = 
+                    '<p class="text-danger">Error loading comments. Please try again later.</p>';
+            });
+    }
+
+    // Add event listener for sort change
+    const sortSelect = document.getElementById('comment-sort');
+    if (sortSelect) {
+        sortSelect.addEventListener('change', sortComments);
+    }
+
+    // Add event listener for show more button
+    document.getElementById('show-more-comments').addEventListener('click', function() {
+        currentPage++;
+        displayComments();
+    });
+
+    // Load comments when page loads
+    loadComments();
+
+    // Remove the deleteComment function and add edit logic
+    window.startEditComment = function(commentId) {
+        const commentObj = allComments.find(c => c.id === commentId);
+        if (!commentObj) return;
+        const card = document.getElementById(`comment-card-${commentId}`);
+        const commentTextDiv = document.getElementById(`comment-text-${commentId}`);
+        // Stars UI for edit
+        let starsHtml = '<div id="edit-star-rating-' + commentId + '" style="font-size: 1.5rem; color: #ff9900; cursor:pointer; margin-bottom:8px;">';
+        for (let i = 1; i <= 5; i++) {
+            starsHtml += `<i class="fa${i <= commentObj.rating ? 's' : 'r'} fa-star edit-star" data-value="${i}"></i>`;
+        }
+        starsHtml += '</div>';
+        commentTextDiv.innerHTML = `
+            <textarea id="edit-comment-input-${commentId}" class="form-control mb-2" rows="2">${commentObj.comment.replace(/"/g, '&quot;')}</textarea>
+            ${starsHtml}
+            <div class="d-flex gap-2">
+                <button class="btn btn-success btn-sm" onclick="saveEditComment(${commentId})">Save</button>
+                <button class="btn btn-secondary btn-sm" onclick="cancelEditComment(${commentId})">Cancel</button>
+                <span id="edit-error-${commentId}" class="text-danger ms-2" style="font-size:0.95em;"></span>
+            </div>
+        `;
+        // Star click logic
+        let selectedEditRating = commentObj.rating;
+        const starEls = commentTextDiv.querySelectorAll('.edit-star');
+        starEls.forEach(star => {
+            star.addEventListener('mouseover', function() {
+                const value = parseInt(this.getAttribute('data-value'));
+                starEls.forEach(s => {
+                    if (parseInt(s.getAttribute('data-value')) <= value) {
+                        s.classList.add('selected');
+                    } else {
+                        s.classList.remove('selected');
+                    }
+                });
+            });
+            star.addEventListener('mouseout', function() {
+                starEls.forEach((s, idx) => {
+                    if (idx < selectedEditRating) {
+                        s.classList.add('selected');
+                    } else {
+                        s.classList.remove('selected');
+                    }
+                });
+            });
+            star.addEventListener('click', function() {
+                selectedEditRating = parseInt(this.getAttribute('data-value'));
+                starEls.forEach((s, idx) => {
+                    if (idx < selectedEditRating) {
+                        s.classList.add('selected');
+                    } else {
+                        s.classList.remove('selected');
+                    }
+                });
+            });
+        });
+        card.dataset.selectedEditRating = selectedEditRating;
+    };
+    window.cancelEditComment = function(commentId) {
+        // Restore original comment text
+        const commentObj = allComments.find(c => c.id === commentId);
+        if (!commentObj) return;
+        const commentTextDiv = document.getElementById(`comment-text-${commentId}`);
+        commentTextDiv.innerHTML = commentObj.comment;
+    };
+    window.saveEditComment = function(commentId) {
+        const commentObj = allComments.find(c => c.id === commentId);
+        if (!commentObj) return;
+        const input = document.getElementById(`edit-comment-input-${commentId}`);
+        const newText = input.value.trim();
+        const card = document.getElementById(`comment-card-${commentId}`);
+        let selectedEditRating = card.dataset.selectedEditRating ? parseInt(card.dataset.selectedEditRating) : commentObj.rating;
+        // Get latest selected rating from stars
+        const starEls = card.querySelectorAll('.edit-star.selected');
+        selectedEditRating = starEls.length;
+        const errorSpan = document.getElementById(`edit-error-${commentId}`);
+        if (!newText) {
+            errorSpan.textContent = 'Comment cannot be empty.';
+            return;
+        }
+        if (!selectedEditRating) {
+            errorSpan.textContent = 'Please select a rating.';
+            return;
+        }
+        if (newText === commentObj.comment.trim() && selectedEditRating === commentObj.rating) {
+            errorSpan.textContent = 'You must change the comment or rating.';
+            return;
+        }
+        // PATCH request
+        fetch(`http://127.0.0.1:8000/api/news/${newsId}/comments/`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                id: commentId,
+                comment: newText,
+                rating: selectedEditRating
+            }),
+            credentials: 'include'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.success) {
+                loadComments();
+            } else {
+                errorSpan.textContent = data.error || 'Failed to update comment.';
+            }
+        })
+        .catch(() => {
+            errorSpan.textContent = 'Failed to update comment.';
+        });
+    };
+
+    // Update share buttons
+    const currentUrl = window.location.href;
+    const shareText = `Check out this news: {{ news.title }}`;
+    
+    document.getElementById('facebook-share').href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`;
+    document.getElementById('twitter-share').href = `https://twitter.com/intent/tweet?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(shareText)}`;
+    document.getElementById('linkedin-share').href = `https://www.linkedin.com/shareArticle?mini=true&url=${encodeURIComponent(currentUrl)}&title=${encodeURIComponent('{{ news.title }}')}`;
+    document.getElementById('whatsapp-share').href = `https://api.whatsapp.com/send?text=${encodeURIComponent(shareText + ' ' + currentUrl)}`;
+});
+</script>
+{% if not user.is_authenticated %}
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<!-- Login/Register Modal -->
+<div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content" style="border-radius: 1.2rem;">
+      <div class="modal-header">
+        <h5 class="modal-title" id="authModalLabel">Login or Register Required</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body text-center">
+        <p id="authModalMsg">You need to login or register to perform this action.</p>
+        <div class="d-flex justify-content-center gap-3 mt-3">
+          <a href="/login/?next={{ request.path }}" class="btn btn-primary">Login</a>
+          <a href="/register/?next={{ request.path }}" class="btn btn-outline-primary">Register</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function showAuthModal(msg) {
+  document.getElementById('authModalMsg').textContent = msg;
+  var modal = new bootstrap.Modal(document.getElementById('authModal'));
+  modal.show();
+}
+// Disable comment form
+const commentForm = document.getElementById('comment-form');
+if (commentForm) {
+  commentForm.classList.add('disabled');
+  commentForm.querySelectorAll('input, textarea, button').forEach(el => {
+    el.disabled = true;
+    el.addEventListener('click', function(e) {
+      e.preventDefault();
+      showAuthModal('Login or Register to comment on this news.');
+    });
+  });
+}
+</script>
+{% endif %}
+{% endblock %} 
