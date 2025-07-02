@@ -26,6 +26,13 @@ urlpatterns = [
     path('api/comments/delete/', views.admin_delete_comment, name='api_admin_delete_comment'),
     path('api/comments/reply/', views.admin_reply_comment, name='api_admin_reply_comment'),
     path('api/comments/replies/', views.comment_replies_api, name='comment_replies_api'),
+    path('api/comments/get-user-replies/', views.get_user_replies, name='get_user_replies'),
+    path('api/comments/toggle-visibility/', views.toggle_comment_visibility, name='toggle_comment_visibility'),
+    path('api/comments/delete_admin_reply/', views.delete_admin_reply, name='delete_admin_reply'),
+    path('api/comments/edit_admin_reply/', views.edit_admin_reply, name='edit_admin_reply'),
+    path('api/comments/toggle_admin_reply_visibility/', views.toggle_admin_reply_visibility, name='toggle_admin_reply_visibility'),
+    path('api/admin-replies/delete/', views.delete_admin_reply, name='delete_admin_reply'),
     path('api/blogs/', blogs_api, name='blogs_api'),
     path('api/books/suggestions/', books_suggestions_api, name='books_suggestions_api'),
+    path('api/comments/delete_user_reply/', views.delete_user_reply, name='delete_user_reply'),
 ] 

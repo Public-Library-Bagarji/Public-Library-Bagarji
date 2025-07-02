@@ -9,8 +9,13 @@ from django.dispatch import receiver
 # Create your models here.
 
 class UserProfile(models.Model):
+    GENDER_CHOICES = [
+        ('male', 'Male'),
+        ('female', 'Female'),
+    ]
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     phone = models.CharField(max_length=20)
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES, default='male')
     profile_image = models.ImageField(upload_to='uploads/profiles/', blank=True, null=True)
 
     def __str__(self):

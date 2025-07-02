@@ -11,6 +11,11 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,22 +25,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-=x9)u6uol-4g@_@aybaw1esx9=+=bdbfosi6oo496#$2tvhv^3'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-=x9)u6uol-4g@_@aybaw1esx9=+=bdbfosi6oo496#$2tvhv^3')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = [
-    'localhost',
-    '127.0.0.1',
-    '192.168.100.22',
-]
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1,192.168.100.22,192.168.0.110').split(',')
 
 
 # Application definition
 
 INSTALLED_APPS = [
-    'jazzmin',
+    'admin_interface',  # Admin interface theming
+    'colorfield',      # Color field for admin interface
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -43,9 +45,12 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'corsheaders',
+    'simple_history',
     'library_admin',
     'public_site',
     'django.contrib.sites',
+    'messages_requests',
+    'comments',
     # 'allauth',  # Removed
     # 'allauth.account',  # Removed
     # 'allauth.socialaccount',  # Already removed
@@ -59,6 +64,7 @@ MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'django.middleware.locale.LocaleMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'public_site.middleware.LogoutDeletedUserMiddleware',
@@ -142,6 +148,8 @@ STATICFILES_DIRS = [
     BASE_DIR / 'static',
 ]
 
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
@@ -153,36 +161,6 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_ALLOW_CREDENTIALS = True
-
-# Jazzmin custom admin UI settings
-JAZZMIN_SETTINGS = {
-    "hide_models": [
-        "sites.site",
-        "allauth.socialaccount",
-        "allauth.socialaccounttoken",
-        "allauth.socialapp",
-        "allauth.account.emailaddress",
-        "library_admin.blogcomment",
-        "library_admin.bookcomment",
-        "library_admin.bookreviewcomment",
-        "library_admin.newscomment",
-    ],
-    "hide_apps": [
-        "allauth.socialaccount",
-        "allauth.account",
-        "sites",
-    ],
-    "custom_links": {
-        "library_admin": [
-            {
-                "name": "Comments",
-                "url": "/admin/comments/",
-                "icon": "fas fa-comments",
-                "permissions": ["is_superuser"],
-            },
-        ],
-    },
-}
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
@@ -206,14 +184,17 @@ ACCOUNT_SIGNUP_FIELDS = ['email*', 'username*', 'password1*', 'password2*']
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# Email Configuration - Using Environment Variables
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'kaleemullahchanna786@gmail.com'
-EMAIL_HOST_PASSWORD = 'tuzg tdxg jxhn xurv'
-DEFAULT_FROM_EMAIL = 'Public Library Bagarji <kaleemullahchanna786@gmail.com>'
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() == 'true'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'kaleemullahchanna786@gmail.com')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'tuzg tdxg jxhn xurv')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'Public Library Bagarji <kaleemullahchanna786@gmail.com>')
 
 SESSION_COOKIE_NAME = 'publicsite_sessionid'
 
 CSRF_COOKIE_NAME = 'publicsite_csrftoken'
+
+X_FRAME_OPTIONS = 'SAMEORIGIN'

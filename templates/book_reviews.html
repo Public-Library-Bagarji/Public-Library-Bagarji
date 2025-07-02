@@ -21,7 +21,7 @@
                     <select id="reviewCategoryFilter" class="form-select filter-select bg-darker text-primary border-fire shadow-sm" style="max-width: 200px;">
                         <option value="all">All Categories</option>
                         {% for cat in review_categories %}
-                            <option value="{{ cat }}">{{ cat|title }}</option>
+                            <option value="{{ cat.id }}" {% if request.GET.category == cat.id|stringformat:"s" %}selected{% endif %}>{{ cat.name }}</option>
                         {% endfor %}
                     </select>
                     <select id="reviewSortOrder" class="form-select filter-select bg-darker text-primary border-fire shadow-sm" style="max-width: 200px;">

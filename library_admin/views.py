@@ -1,7 +1,8 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt, csrf_protect
-from .models import Article, BookReview, Book, News, BlogComment, BookReviewComment, NewsComment, BookComment, CommentReply
+from .models import Article, BookReview, Book, News, CommentReply
+from comments.models import BlogComment, BookReviewComment, NewsComment, BookComment
 from datetime import datetime
 from django.db.models import Q
 from django.views.decorators.http import require_http_methods, require_POST
@@ -18,6 +19,7 @@ from django.contrib.admin.models import LogEntry, DELETION
 from django.contrib.contenttypes.models import ContentType
 from public_site.models import UserProfile
 from django.conf import settings
+from django.db import models
 
 # Create your views here.
 
@@ -39,6 +41,13 @@ def clean_markdown_preview(text):
     cleaned = re.sub(r'\s+', ' ', cleaned)  # Replace multiple spaces with single space
     
     return cleaned.strip()
+
+def flatten_replies_for_api(comment):
+    flat = []
+    for reply in comment.replies.all().order_by('date'):
+        flat.append(reply)
+        flat.extend(flatten_replies_for_api(reply))
+    return flat
 
 @csrf_exempt
 def articles_api(request):
@@ -237,7 +246,7 @@ def books_api(request):
     books = Book.objects.all()
 
     if category != 'all':
-        books = books.filter(category__iexact=category)
+        books = books.filter(category__name__iexact=category)
 
     if sort_by == 'oldest':
         books = books.order_by('publication_date')
@@ -255,7 +264,7 @@ def books_api(request):
         'cover_image': request.build_absolute_uri(book.cover_image.url) if book.cover_image else '/static/images/default-book.jpg',
         'pdf_file': request.build_absolute_uri(book.pdf_file.url) if book.pdf_file else None,
         'views': getattr(book, 'views', 0),
-        'category': book.category
+        'category': book.category.name if book.category else None
     } for book in books]
     return JsonResponse(book_list, safe=False)
 
@@ -286,7 +295,7 @@ def books_search_api(request):
     books = Book.objects.all()
 
     if category != 'all':
-        books = books.filter(category__iexact=category)
+        books = books.filter(category__name__iexact=category)
 
     if query:
         books = books.filter(
@@ -308,8 +317,7 @@ def books_search_api(request):
         'publication_date': book.publication_date.strftime('%Y-%m-%d') if book.publication_date else None,
         'cover_image': request.build_absolute_uri(book.cover_image.url) if book.cover_image else '/static/images/default-book.jpg',
         'pdf_file': request.build_absolute_uri(book.pdf_file.url) if book.pdf_file else None,
-        'views': getattr(book, 'views', 0),
-        'category': book.category
+        'category': book.category.name if book.category else None
     } for book in books]
     return JsonResponse(book_list, safe=False)
 
@@ -317,47 +325,70 @@ def books_search_api(request):
 @require_http_methods(["GET", "POST", "PATCH"])
 def article_comments_api(request, article_id):
     if request.method == "GET":
-        comments = BlogComment.objects.filter(article_id=article_id).order_by('-date')
-        data = []
-        for c in comments:
-            replies = CommentReply.objects.filter(comment_type='blog', comment_id=c.id).order_by('date')
-            profile_image = '/static/images/default_profile.png'
-            if c.user_id:
-                try:
-                    profile = UserProfile.objects.get(user_id=c.user_id)
-                    if profile.profile_image:
-                        profile_image = profile.profile_image.url
-                except UserProfile.DoesNotExist:
-                    pass
-            data.append({
-                'id': c.id,
-                'name': c.name,
-                'comment': c.comment,
-                'rating': c.rating,
-                'date': c.date.strftime('%Y-%m-%d %H:%M'),
-                'profile_image': profile_image,
-                'is_owner': request.user.is_authenticated and c.user_id == request.user.id,
-                'replies': [
-                    {
+        try:
+            article = Article.objects.get(id=article_id)
+            # IMPORTANT: Filter for active comments and prefetch active replies for efficiency
+            comments = article.comments.filter(is_active=True, parent__isnull=True).prefetch_related(
+                models.Prefetch('replies', queryset=BlogComment.objects.filter(is_active=True).order_by('date'))
+            )
+            
+            def serialize_comment_flat(comment):
+                admin_replies = CommentReply.objects.filter(
+                    comment_id=comment.id,
+                    comment_type='blog',
+                    is_active=True
+                ).order_by('date')
+                # Flat user replies
+                flat_user_replies = flatten_replies_for_api(comment)
+                return {
+                    'id': comment.id,
+                    'name': comment.user.username if comment.user else comment.name,
+                    'comment': comment.comment,
+                    'rating': comment.rating,
+                    'date': comment.date.strftime('%Y-%m-%d %H:%M'),
+                    'profile_image': comment.user.userprofile.profile_image.url if comment.user and hasattr(comment.user, 'userprofile') and comment.user.userprofile.profile_image else '/static/images/default-avatar.png',
+                    'replies': [{
+                        'id': reply.id,
+                        'name': reply.user.username if reply.user else reply.name,
+                        'comment': reply.comment,
+                        'rating': reply.rating,
+                        'date': reply.date.strftime('%Y-%m-%d %H:%M'),
+                        'profile_image': reply.user.userprofile.profile_image.url if reply.user and hasattr(reply.user, 'userprofile') and reply.user.userprofile.profile_image else '/static/images/default-avatar.png',
+                        'parent_name': reply.parent.name if reply.parent else comment.name
+                    } for reply in flat_user_replies],
+                    'admin_replies': [{
                         'reply': r.reply,
                         'admin_name': r.admin_name,
-                        'date': r.date.strftime('%Y-%m-%d %H:%M'),
-                        'admin_image': '/static/images/websitemainlogo.jpg'
-                    } for r in replies
-                ]
-            })
-        return JsonResponse(data, safe=False)
+                        'date': r.date.strftime('%Y-%m-%d %H:%M')
+                    } for r in admin_replies]
+                }
+
+            comments_list = [serialize_comment_flat(comment) for comment in comments]
+            return JsonResponse(comments_list, safe=False)
+        except Article.DoesNotExist:
+            return JsonResponse({'error': 'Article not found'}, status=404)
     elif request.method == "POST":
         if not request.user.is_authenticated:
             return JsonResponse({'success': False, 'error': 'Authentication required.'}, status=403)
         body = json.loads(request.body)
-        comment = BlogComment.objects.create(
-            article_id=article_id,
-            user=request.user,
-            name=request.user.username,
-            comment=body['comment'],
-            rating=body['rating']
-        )
+        parent_id = body.get('parent_id')
+        if parent_id:
+            comment = BlogComment.objects.create(
+                article_id=article_id,
+                user=request.user,
+                name=request.user.username,
+                comment=body['comment'],
+                parent_id=parent_id
+            )
+        else:
+            # This is a top-level comment, require rating
+            comment = BlogComment.objects.create(
+                article_id=article_id,
+                user=request.user,
+                name=request.user.username,
+                comment=body['comment'],
+                rating=body['rating']
+            )
         return JsonResponse({'success': True}, status=201)
     elif request.method == "PATCH":
         print('DEBUG PATCH:', request.user, request.body)
@@ -395,63 +426,78 @@ def article_comments_api(request, article_id):
             print('DEBUG PATCH ERROR:', e)
             return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
-# @csrf_exempt
-# @require_http_methods(["DELETE"])
-# def delete_article_comment(request, article_id, comment_id):
-#     try:
-#         comment = BlogComment.objects.get(id=comment_id, article_id=article_id)
-#         comment.delete()
-#         return JsonResponse({'success': True})
-#     except BlogComment.DoesNotExist:
-#         return JsonResponse({'success': False, 'error': 'Comment not found'}, status=404)
-#     except Exception as e:
-#         return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
 @csrf_exempt
 @require_http_methods(["GET", "POST", "PATCH"])
 def bookreview_comments_api(request, review_id):
     if request.method == "GET":
-        comments = BookReviewComment.objects.filter(review_id=review_id).order_by('-date')
-        data = []
-        for c in comments:
-            replies = CommentReply.objects.filter(comment_type='bookreview', comment_id=c.id).order_by('date')
-            profile_image = '/static/images/default_profile.png'
-            if c.user_id:
-                try:
-                    profile = UserProfile.objects.get(user_id=c.user_id)
-                    if profile.profile_image:
-                        profile_image = profile.profile_image.url
-                except UserProfile.DoesNotExist:
-                    pass
-            data.append({
-                'id': c.id,
-                'name': c.name,
-                'comment': c.comment,
-                'rating': c.rating,
-                'date': c.date.strftime('%Y-%m-%d %H:%M'),
-                'profile_image': profile_image,
-                'is_owner': request.user.is_authenticated and c.user_id == request.user.id,
-                'replies': [
-                    {
+        try:
+            review = BookReview.objects.get(id=review_id)
+            # Fetch only active comments and prefetch active replies
+            comments = review.comments.filter(is_active=True, parent__isnull=True).prefetch_related(
+                models.Prefetch('replies', queryset=BookReviewComment.objects.filter(is_active=True).order_by('date'))
+            )
+            def serialize_comment_flat(comment):
+                admin_replies = CommentReply.objects.filter(
+                    comment_id=comment.id,
+                    comment_type='bookreview',
+                    is_active=True
+                ).order_by('date')
+                # Flat user replies
+                flat_user_replies = flatten_replies_for_api(comment)
+                return {
+                    'id': comment.id,
+                    'name': comment.user.username if comment.user else comment.name,
+                    'comment': comment.comment,
+                    'rating': comment.rating,
+                    'date': comment.date.strftime('%Y-%m-%d %H:%M'),
+                    'profile_image': comment.user.userprofile.profile_image.url if comment.user and hasattr(comment.user, 'userprofile') and comment.user.userprofile.profile_image else '/static/images/default-avatar.png',
+                    'replies': [{
+                        'id': reply.id,
+                        'name': reply.user.username if reply.user else reply.name,
+                        'comment': reply.comment,
+                        'rating': reply.rating,
+                        'date': reply.date.strftime('%Y-%m-%d %H:%M'),
+                        'profile_image': reply.user.userprofile.profile_image.url if reply.user and hasattr(reply.user, 'userprofile') and reply.user.userprofile.profile_image else '/static/images/default-avatar.png',
+                        'parent_name': reply.parent.name if reply.parent else comment.name
+                    } for reply in flat_user_replies],
+                    'admin_replies': [{
                         'reply': r.reply,
                         'admin_name': r.admin_name,
-                        'date': r.date.strftime('%Y-%m-%d %H:%M'),
-                        'admin_image': '/static/images/websitemainlogo.jpg'
-                    } for r in replies
-                ]
-            })
-        return JsonResponse(data, safe=False)
+                        'date': r.date.strftime('%Y-%m-%d %H:%M')
+                    } for r in admin_replies]
+                }
+            comments_list = [serialize_comment_flat(comment) for comment in comments]
+            return JsonResponse(comments_list, safe=False)
+        except BookReview.DoesNotExist:
+            return JsonResponse({'error': 'Review not found'}, status=404)
     elif request.method == "POST":
         if not request.user.is_authenticated:
             return JsonResponse({'success': False, 'error': 'Authentication required.'}, status=403)
         body = json.loads(request.body)
-        comment = BookReviewComment.objects.create(
-            review_id=review_id,
-            user=request.user,
-            name=request.user.username,
-            comment=body['comment'],
-            rating=body['rating']
-        )
+        parent_id = body.get('parent_id')
+        if parent_id:
+            try:
+                parent_comment = BookReviewComment.objects.get(id=parent_id)
+                if parent_comment.review_id != int(review_id):
+                    return JsonResponse({'success': False, 'error': 'Parent comment does not belong to this review.'}, status=400)
+            except BookReviewComment.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Parent comment not found.'}, status=404)
+            comment = BookReviewComment.objects.create(
+                review_id=review_id,
+                user=request.user,
+                name=request.user.username,
+                comment=body['comment'],
+                parent=parent_comment
+            )
+        else:
+            # This is a top-level comment, require rating
+            comment = BookReviewComment.objects.create(
+                review_id=review_id,
+                user=request.user,
+                name=request.user.username,
+                comment=body['comment'],
+                rating=body['rating']
+            )
         return JsonResponse({'success': True}, status=201)
     elif request.method == "PATCH":
         print('DEBUG PATCH:', request.user, request.body)
@@ -489,63 +535,78 @@ def bookreview_comments_api(request, review_id):
             print('DEBUG PATCH ERROR:', e)
             return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
-# @csrf_exempt
-# @require_http_methods(["DELETE"])
-# def delete_bookreview_comment(request, review_id, comment_id):
-#     try:
-#         comment = BookReviewComment.objects.get(id=comment_id, review_id=review_id)
-#         comment.delete()
-#         return JsonResponse({'success': True})
-#     except BookReviewComment.DoesNotExist:
-#         return JsonResponse({'success': False, 'error': 'Comment not found'}, status=404)
-#     except Exception as e:
-#         return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
 @csrf_exempt
 @require_http_methods(["GET", "POST", "PATCH"])
 def news_comments_api(request, news_id):
     if request.method == "GET":
-        comments = NewsComment.objects.filter(news_id=news_id).order_by('-date')
-        data = []
-        for c in comments:
-            replies = CommentReply.objects.filter(comment_type='news', comment_id=c.id).order_by('date')
-            profile_image = '/static/images/default_profile.png'
-            if c.user_id:
-                try:
-                    profile = UserProfile.objects.get(user_id=c.user_id)
-                    if profile.profile_image:
-                        profile_image = profile.profile_image.url
-                except UserProfile.DoesNotExist:
-                    pass
-            data.append({
-                'id': c.id,
-                'name': c.name,
-                'comment': c.comment,
-                'rating': c.rating,
-                'date': c.date.strftime('%Y-%m-%d %H:%M'),
-                'profile_image': profile_image,
-                'is_owner': request.user.is_authenticated and c.user_id == request.user.id,
-                'replies': [
-                    {
+        try:
+            news = News.objects.get(id=news_id)
+            # Fetch only active comments and prefetch active replies
+            comments = news.comments.filter(is_active=True, parent__isnull=True).prefetch_related(
+                models.Prefetch('replies', queryset=NewsComment.objects.filter(is_active=True).order_by('date'))
+            )
+            def serialize_comment_flat(comment):
+                admin_replies = CommentReply.objects.filter(
+                    comment_id=comment.id,
+                    comment_type='news',
+                    is_active=True
+                ).order_by('date')
+                # Flat user replies
+                flat_user_replies = flatten_replies_for_api(comment)
+                return {
+                    'id': comment.id,
+                    'name': comment.user.username if comment.user else comment.name,
+                    'comment': comment.comment,
+                    'rating': comment.rating,
+                    'date': comment.date.strftime('%Y-%m-%d %H:%M'),
+                    'profile_image': comment.user.userprofile.profile_image.url if comment.user and hasattr(comment.user, 'userprofile') and comment.user.userprofile.profile_image else '/static/images/default-avatar.png',
+                    'replies': [{
+                        'id': reply.id,
+                        'name': reply.user.username if reply.user else reply.name,
+                        'comment': reply.comment,
+                        'rating': reply.rating,
+                        'date': reply.date.strftime('%Y-%m-%d %H:%M'),
+                        'profile_image': reply.user.userprofile.profile_image.url if reply.user and hasattr(reply.user, 'userprofile') and reply.user.userprofile.profile_image else '/static/images/default-avatar.png',
+                        'parent_name': reply.parent.name if reply.parent else comment.name
+                    } for reply in flat_user_replies],
+                    'admin_replies': [{
                         'reply': r.reply,
                         'admin_name': r.admin_name,
-                        'date': r.date.strftime('%Y-%m-%d %H:%M'),
-                        'admin_image': '/static/images/websitemainlogo.jpg'
-                    } for r in replies
-                ]
-            })
-        return JsonResponse(data, safe=False)
+                        'date': r.date.strftime('%Y-%m-%d %H:%M')
+                    } for r in admin_replies]
+                }
+            comments_list = [serialize_comment_flat(comment) for comment in comments]
+            return JsonResponse(comments_list, safe=False)
+        except News.DoesNotExist:
+            return JsonResponse({'error': 'News not found'}, status=404)
     elif request.method == "POST":
         if not request.user.is_authenticated:
             return JsonResponse({'success': False, 'error': 'Authentication required.'}, status=403)
         body = json.loads(request.body)
-        comment = NewsComment.objects.create(
-            news_id=news_id,
-            user=request.user,
-            name=request.user.username,
-            comment=body['comment'],
-            rating=body['rating']
-        )
+        parent_id = body.get('parent_id')
+        if parent_id:
+            try:
+                parent_comment = NewsComment.objects.get(id=parent_id)
+                if parent_comment.news_id != int(news_id):
+                    return JsonResponse({'success': False, 'error': 'Parent comment does not belong to this news.'}, status=400)
+            except NewsComment.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Parent comment not found.'}, status=404)
+            comment = NewsComment.objects.create(
+                news_id=news_id,
+                user=request.user,
+                name=request.user.username,
+                comment=body['comment'],
+                parent=parent_comment
+            )
+        else:
+            # This is a top-level comment, require rating
+            comment = NewsComment.objects.create(
+                news_id=news_id,
+                user=request.user,
+                name=request.user.username,
+                comment=body['comment'],
+                rating=body['rating']
+            )
         return JsonResponse({'success': True}, status=201)
     elif request.method == "PATCH":
         print('DEBUG PATCH:', request.user, request.body)
@@ -583,63 +644,78 @@ def news_comments_api(request, news_id):
             print('DEBUG PATCH ERROR:', e)
             return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
-# @csrf_exempt
-# @require_http_methods(["DELETE"])
-# def delete_news_comment(request, news_id, comment_id):
-#     try:
-#         comment = NewsComment.objects.get(id=comment_id, news_id=news_id)
-#         comment.delete()
-#         return JsonResponse({'success': True})
-#     except NewsComment.DoesNotExist:
-#         return JsonResponse({'success': False, 'error': 'Comment not found'}, status=404)
-#     except Exception as e:
-#         return JsonResponse({'success': False, 'error': str(e)}, status=500)
-
 @csrf_exempt
 @require_http_methods(["GET", "POST", "PATCH"])
 def book_comments_api(request, book_id):
     if request.method == "GET":
-        comments = BookComment.objects.filter(book_id=book_id).order_by('-date')
-        data = []
-        for c in comments:
-            replies = CommentReply.objects.filter(comment_type='book', comment_id=c.id).order_by('date')
-            profile_image = '/static/images/default_profile.png'
-            if c.user_id:
-                try:
-                    profile = UserProfile.objects.get(user_id=c.user_id)
-                    if profile.profile_image:
-                        profile_image = profile.profile_image.url
-                except UserProfile.DoesNotExist:
-                    pass
-            data.append({
-                'id': c.id,
-                'name': c.name,
-                'comment': c.comment,
-                'rating': c.rating,
-                'date': c.date.strftime('%Y-%m-%d %H:%M'),
-                'profile_image': profile_image,
-                'is_owner': request.user.is_authenticated and c.user_id == request.user.id,
-                'replies': [
-                    {
+        try:
+            book = Book.objects.get(id=book_id)
+            # Fetch only active comments and prefetch active replies
+            comments = book.comments.filter(is_active=True, parent__isnull=True).prefetch_related(
+                models.Prefetch('replies', queryset=BookComment.objects.filter(is_active=True).order_by('date'))
+            )
+            def serialize_comment_flat(comment):
+                admin_replies = CommentReply.objects.filter(
+                    comment_id=comment.id,
+                    comment_type='book',
+                    is_active=True
+                ).order_by('date')
+                # Flat user replies
+                flat_user_replies = flatten_replies_for_api(comment)
+                return {
+                    'id': comment.id,
+                    'name': comment.user.username if comment.user else comment.name,
+                    'comment': comment.comment,
+                    'rating': comment.rating,
+                    'date': comment.date.strftime('%Y-%m-%d %H:%M'),
+                    'profile_image': comment.user.userprofile.profile_image.url if comment.user and hasattr(comment.user, 'userprofile') and comment.user.userprofile.profile_image else '/static/images/default-avatar.png',
+                    'replies': [{
+                        'id': reply.id,
+                        'name': reply.user.username if reply.user else reply.name,
+                        'comment': reply.comment,
+                        'rating': reply.rating,
+                        'date': reply.date.strftime('%Y-%m-%d %H:%M'),
+                        'profile_image': reply.user.userprofile.profile_image.url if reply.user and hasattr(reply.user, 'userprofile') and reply.user.userprofile.profile_image else '/static/images/default-avatar.png',
+                        'parent_name': reply.parent.name if reply.parent else comment.name
+                    } for reply in flat_user_replies],
+                    'admin_replies': [{
                         'reply': r.reply,
                         'admin_name': r.admin_name,
-                        'date': r.date.strftime('%Y-%m-%d %H:%M'),
-                        'admin_image': '/static/images/websitemainlogo.jpg'
-                    } for r in replies
-                ]
-            })
-        return JsonResponse(data, safe=False)
+                        'date': r.date.strftime('%Y-%m-%d %H:%M')
+                    } for r in admin_replies]
+                }
+            comments_list = [serialize_comment_flat(comment) for comment in comments]
+            return JsonResponse(comments_list, safe=False)
+        except Book.DoesNotExist:
+            return JsonResponse({'error': 'Book not found'}, status=404)
     elif request.method == "POST":
         if not request.user.is_authenticated:
             return JsonResponse({'success': False, 'error': 'Authentication required.'}, status=403)
         body = json.loads(request.body)
-        comment = BookComment.objects.create(
-            book_id=book_id,
-            user=request.user,
-            name=request.user.username,
-            comment=body['comment'],
-            rating=body['rating']
-        )
+        parent_id = body.get('parent_id')
+        if parent_id:
+            try:
+                parent_comment = BookComment.objects.get(id=parent_id)
+                if parent_comment.book_id != int(book_id):
+                    return JsonResponse({'success': False, 'error': 'Parent comment does not belong to this book.'}, status=400)
+            except BookComment.DoesNotExist:
+                return JsonResponse({'success': False, 'error': 'Parent comment not found.'}, status=404)
+            comment = BookComment.objects.create(
+                book_id=book_id,
+                user=request.user,
+                name=request.user.username,
+                comment=body['comment'],
+                parent=parent_comment
+            )
+        else:
+            # This is a top-level comment, require rating
+            comment = BookComment.objects.create(
+                book_id=book_id,
+                user=request.user,
+                name=request.user.username,
+                comment=body['comment'],
+                rating=body['rating']
+            )
         return JsonResponse({'success': True}, status=201)
     elif request.method == "PATCH":
         print('DEBUG PATCH:', request.user, request.body)
@@ -677,6 +753,20 @@ def book_comments_api(request, book_id):
             print('DEBUG PATCH ERROR:', e)
             return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
+@csrf_exempt
+def comment_replies_api(request):
+    comment_id = request.GET.get('comment_id')
+    comment_type = request.GET.get('comment_type')
+    replies = CommentReply.objects.filter(comment_id=comment_id, comment_type=comment_type).order_by('date')
+    reply_list = [{
+        'id': reply.id,
+        'reply': reply.reply,
+        'admin_name': reply.admin_name,
+        'date': reply.date.strftime('%Y-%m-%d %H:%M'),
+        'is_active': reply.is_active
+    } for reply in replies]
+    return JsonResponse({'replies': reply_list})
+
 @staff_member_required
 def admin_comments_dashboard(request):
     blog_comments = BlogComment.objects.all()
@@ -686,23 +776,34 @@ def admin_comments_dashboard(request):
     all_comments = list(blog_comments) + list(book_comments) + list(bookreview_comments) + list(news_comments)
     all_comments.sort(key=lambda c: c.date, reverse=True)
 
-    # Attach reply to each comment (if exists)
+    # Attach admin reply count and flat user reply count to each comment
     for c in all_comments:
+        comment_type = None
         if hasattr(c, 'article_id'):
-            c.reply = CommentReply.objects.filter(comment_type='blog', comment_id=c.id).first()
+            comment_type = 'blog'
         elif hasattr(c, 'book_id'):
-            c.reply = CommentReply.objects.filter(comment_type='book', comment_id=c.id).first()
+            comment_type = 'book'
         elif hasattr(c, 'review_id'):
-            c.reply = CommentReply.objects.filter(comment_type='bookreview', comment_id=c.id).first()
+            comment_type = 'bookreview'
         elif hasattr(c, 'news_id'):
-            c.reply = CommentReply.objects.filter(comment_type='news', comment_id=c.id).first()
+            comment_type = 'news'
+        
+        if comment_type:
+            c.admin_reply_count = CommentReply.objects.filter(comment_type=comment_type, comment_id=c.id).count()
         else:
-            c.reply = None
+            c.admin_reply_count = 0
+        c.flat_user_reply_count = flatten_replies_count(c)
 
     context = {
         'comments': all_comments,
     }
     return render(request, "admin/comments_changelist.html", context)
+
+def flatten_replies_count(comment):
+    count = comment.replies.count()
+    for reply in comment.replies.all():
+        count += flatten_replies_count(reply)
+    return count
 
 def staff_member_required_json(view_func):
     @wraps(view_func)
@@ -777,23 +878,134 @@ def admin_delete_comment(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
-@csrf_exempt
-def comment_replies_api(request):
-    if request.method == 'GET':
-        comment_id = request.GET.get('comment_id')
-        comment_type = request.GET.get('comment_type')
-        from .models import CommentReply
-        replies = CommentReply.objects.filter(comment_type=comment_type, comment_id=comment_id).order_by('date')
-        data = [
-            {
-                'reply': r.reply,
-                'admin_name': r.admin_name,
-                'date': r.date.strftime('%Y-%m-%d %H:%M'),
-                'admin_image': '/static/images/websitemainlogo.jpg'
-            }
-            for r in replies
-        ]
-        return JsonResponse({'replies': data})
+@require_POST
+@staff_member_required_json
+def edit_admin_reply(request):
+    """
+    Edits the text of an admin reply.
+    """
+    try:
+        data = json.loads(request.body)
+        reply_id = data.get('reply_id')
+        new_text = data.get('text', '').strip()
+
+        if not reply_id or not new_text:
+            return JsonResponse({'success': False, 'error': 'Reply ID or text not provided'}, status=400)
+
+        reply = CommentReply.objects.get(id=reply_id)
+        reply.reply = new_text
+        reply.save()
+        
+        return JsonResponse({'success': True, 'new_text': new_text})
+    except CommentReply.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Admin reply not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@require_POST
+@staff_member_required_json
+def toggle_admin_reply_visibility(request):
+    """
+    Toggles the is_active status of an admin reply (CommentReply).
+    """
+    try:
+        data = json.loads(request.body)
+        reply_id = data.get('reply_id')
+        if not reply_id:
+            return JsonResponse({'success': False, 'error': 'Reply ID not provided'}, status=400)
+            
+        reply = CommentReply.objects.get(id=reply_id)
+        reply.is_active = not reply.is_active
+        reply.save()
+        
+        return JsonResponse({'success': True, 'is_active': reply.is_active})
+    except CommentReply.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Admin reply not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@require_POST
+@staff_member_required_json
+def delete_admin_reply(request):
+    """
+    Deletes an admin reply (CommentReply object).
+    """
+    try:
+        data = json.loads(request.body)
+        reply_id = data.get('reply_id')
+        if not reply_id:
+            return JsonResponse({'success': False, 'error': 'Reply ID not provided'}, status=400)
+            
+        reply = CommentReply.objects.get(id=reply_id)
+        reply.delete()
+        
+        return JsonResponse({'success': True})
+    except CommentReply.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Admin reply not found'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
+
+@staff_member_required
+def get_user_replies(request):
+    comment_id = request.GET.get('comment_id')
+    comment_type = request.GET.get('comment_type')
+
+    model_map = {
+        'blog': BlogComment,
+        'book': BookComment,
+        'bookreview': BookReviewComment,
+        'news': NewsComment,
+    }
+
+    model = model_map.get(comment_type)
+    if not model or not comment_id:
+        return JsonResponse({'error': 'Invalid parameters'}, status=400)
+
+    try:
+        parent_comment = model.objects.get(id=comment_id)
+        replies = flatten_replies_for_api(parent_comment)
+        reply_list = [{
+            'id': reply.id,
+            'user': reply.user.username if reply.user else 'Anonymous',
+            'comment': reply.comment,
+            'date': reply.date.strftime('%Y-%m-%d %H:%M'),
+            'is_active': reply.is_active
+        } for reply in replies]
+        return JsonResponse({'replies': reply_list})
+    except model.DoesNotExist:
+        return JsonResponse({'error': 'Parent comment not found'}, status=404)
+
+@require_POST
+@staff_member_required_json
+def toggle_comment_visibility(request):
+    """
+    Toggles the is_active status of a given comment or reply.
+    """
+    try:
+        data = json.loads(request.body)
+        comment_id = data.get('comment_id')
+        comment_type = data.get('comment_type')
+
+        model_map = {
+            'blog': BlogComment,
+            'book': BookComment,
+            'bookreview': BookReviewComment,
+            'news': NewsComment,
+        }
+        
+        model = model_map.get(comment_type)
+        if not model or not comment_id:
+            return JsonResponse({'success': False, 'error': 'Invalid parameters'}, status=400)
+
+        comment = model.objects.get(id=comment_id)
+        comment.is_active = not comment.is_active
+        comment.save()
+        
+        return JsonResponse({'success': True, 'is_active': comment.is_active})
+    except (model.DoesNotExist, AttributeError):
+        return JsonResponse({'success': False, 'error': 'Comment not found or invalid type'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)
 
 @csrf_exempt
 def blogs_api(request):
@@ -856,3 +1068,31 @@ def books_suggestions_api(request):
         books = Book.objects.filter(title__icontains=query).order_by('title')[:8]
         suggestions = list(books.values_list('title', flat=True))
     return JsonResponse({'suggestions': suggestions})
+
+@csrf_exempt
+@require_POST
+@staff_member_required_json
+def delete_user_reply(request):
+    import json
+    data = json.loads(request.body)
+    reply_id = data.get('reply_id')
+    comment_type = data.get('comment_type')
+    if not reply_id or not comment_type:
+        return JsonResponse({'success': False, 'error': 'Missing reply id or type.'}, status=400)
+    model_map = {
+        'blog': BlogComment,
+        'book': BookComment,
+        'bookreview': BookReviewComment,
+        'news': NewsComment,
+    }
+    model = model_map.get(comment_type)
+    if not model:
+        return JsonResponse({'success': False, 'error': 'Invalid comment type.'}, status=400)
+    try:
+        reply = model.objects.get(id=reply_id)
+        reply.delete()
+        return JsonResponse({'success': True})
+    except model.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Reply not found.'}, status=404)
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)}, status=500)

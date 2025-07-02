@@ -1,0 +1,58 @@
+{% extends 'admin/base_site.html' %}
+{% block content %}
+  <h1>Replies for Comment #{{ comment.id }}</h1>
+  <div style="margin-bottom: 2em; padding: 1em; border: 1px solid #ccc; background: #f9f9f9;">
+    <strong>{{ comment.user }}:</strong> {{ comment.comment }}<br>
+    <small>{{ comment.date }}</small>
+  </div>
+  {% if message %}
+    <div style="color: green; margin-bottom: 1em;">{{ message }}</div>
+  {% endif %}
+  <h2>Replies ({{ replies|length }})</h2>
+  {% if replies %}
+    <ul>
+      {% for reply in replies %}
+        <li style="margin-bottom: 1em; position: relative;">
+          <strong>{{ reply.user }}:</strong> {{ reply.comment }}<br>
+          <small>{{ reply.date }}</small><br>
+          {% if reply.parent %}
+            <span style="color: #888; font-size: 0.95em;">Reply to @{{ reply.parent.user.username|default:reply.parent.name }}</span>
+          {% endif %}
+          <form method="post" style="position: absolute; right: 0; top: 0;">
+            {% csrf_token %}
+            <input type="hidden" name="delete_public_reply" value="{{ reply.id }}">
+            <button type="submit" style="background: #ff4d4f; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer;">Delete</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p>No replies found.</p>
+  {% endif %}
+  {% if admin_replies %}
+    <h2>Admin Replies ({{ admin_replies|length }})</h2>
+    <ul>
+      {% for areply in admin_replies %}
+        <li style="margin-bottom: 1em; background: #e6f7ff; border-left: 4px solid #1890ff; padding: 0.5em 1em; position: relative;">
+          <strong>Admin:</strong> {{ areply.admin_name }}<br>
+          {{ areply.reply }}<br>
+          <small>{{ areply.date }}</small><br>
+          <span style="color: #888; font-size: 0.95em;">Reply to @{{ comment.user.username|default:comment.name }}</span>
+          <form method="post" style="position: absolute; right: 0; top: 0;">
+            {% csrf_token %}
+            <input type="hidden" name="delete_admin_reply" value="{{ areply.id }}">
+            <button type="submit" style="background: #ff4d4f; color: white; border: none; padding: 2px 8px; border-radius: 3px; cursor: pointer;">Delete</button>
+          </form>
+        </li>
+      {% endfor %}
+    </ul>
+  {% endif %}
+  <hr>
+  <h3>Add Admin Reply</h3>
+  <form method="post" style="margin-top: 1em;">
+    {% csrf_token %}
+    <textarea name="admin_reply" rows="3" style="width: 100%; max-width: 500px;" placeholder="Type your reply..."></textarea><br>
+    <button type="submit" style="margin-top: 0.5em; background: #1890ff; color: white; border: none; padding: 6px 16px; border-radius: 3px; cursor: pointer;">Reply</button>
+  </form>
+  <a href="javascript:history.back()" class="button">Back</a>
+{% endblock %} 

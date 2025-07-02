@@ -442,7 +442,6 @@ a:hover {
 /* Hero Sections - Enhanced Professional Styling */
 .hero-section {
     position: relative;
-    background: url('../images/hero-bg.jpg') no-repeat center center/cover;
     min-height: 50vh;
     display: flex;
     align-items: center;
@@ -658,13 +657,6 @@ a:hover {
         font-size: 0.9rem !important;
     }
     }
-    .footer-title {
-        font-size: 0.95rem !important;
-    }
-    .btn, .btn-lg {
-        font-size: 0.95rem !important;
-    }
-}
 
 /* General typography adjustments */
 h1 { font-size: 3.5rem; }
@@ -2610,4 +2602,12 @@ h3 { font-size: 2rem; }
 .blog-card .blog-content-preview {
     -webkit-line-clamp: 2;
     line-clamp: 2;
+}
+
+@media (max-width: 576px) {
+    .hero-section {
+        padding-top: 2.2rem !important;
+        padding-bottom: 1.2rem !important;
+        min-height: unset !important;
+    }
 }

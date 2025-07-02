@@ -1,4 +1,5 @@
 {% extends "base.html" %}
+{% load markdown_extras %}
 
 {% block title %}Books - Public Library Bagarji{% endblock %}
 
@@ -53,6 +54,62 @@
         </div>
         <div class="text-center py-5" id="no-books-message" style="display:none;">
             <p class="lead">No books available at the moment. Please check back later!</p>
+        </div>
+    </div>
+</section>
+
+<!-- Book Request Section -->
+<section class="py-5">
+    <div class="container">
+        <div class="row justify-content-center">
+            <div class="col-lg-7 col-md-9">
+                <div class="card book-request-modern-card shadow-lg border-0">
+                    <div class="card-body p-4">
+                        <h2 class="h4 mb-3 text-center">Request for a Book</h2>
+                        <p class="text-secondary text-center mb-4">Can't find your book? Let us know and we'll try to add it to our library!</p>
+                        {% if book_request_success %}
+                            <div class="alert alert-success text-center mb-4" role="alert">
+                                <i class="fas fa-check-circle me-2"></i>Thank you! Your request has been submitted.
+                            </div>
+                        {% endif %}
+                        {% if book_request_form %}
+                            <form method="post" class="row g-3">
+                                {% csrf_token %}
+                                <div class="col-12 col-md-6">
+                                    {{ book_request_form.book_name.label_tag }}
+                                    {{ book_request_form.book_name }}
+                                    {% for error in book_request_form.book_name.errors %}
+                                        <div class="text-danger small">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-12 col-md-6">
+                                    {{ book_request_form.author_name.label_tag }}
+                                    {{ book_request_form.author_name }}
+                                    {% for error in book_request_form.author_name.errors %}
+                                        <div class="text-danger small">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-12">
+                                    {{ book_request_form.message.label_tag }}
+                                    {{ book_request_form.message }}
+                                    {% for error in book_request_form.message.errors %}
+                                        <div class="text-danger small">{{ error }}</div>
+                                    {% endfor %}
+                                </div>
+                                <div class="col-12 text-center mt-2">
+                                    <button type="submit" name="book_request_submit" class="btn btn-fire px-5 py-2">
+                                        <i class="fas fa-paper-plane"></i>Request Book
+                                    </button>
+                                </div>
+                            </form>
+                        {% else %}
+                            <div class="alert alert-warning text-center mb-0" role="alert">
+                                <i class="fas fa-lock me-2"></i>Only registered users can request a book. <a href="{% url 'login' %}" class="text-fire" style="color: var(--fire-primary); font-weight:600;">Login</a> to request.
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </section>
@@ -221,6 +278,62 @@
 
 /* Mobile-Specific Styles for Books Page */
 @media (max-width: 767px) {
+    .search-filter-section .container,
+    .search-filter-section .row,
+    .search-filter-section .col-md-8,
+    .search-filter-section .col-lg-6 {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 0 0 100% !important;
+        display: block !important;
+    }
+    .search-filter-section .row.justify-content-center {
+        justify-content: flex-start !important;
+    }
+    .input-group.search-box {
+        flex-wrap: nowrap !important;
+        width: 100% !important;
+        display: flex !important;
+        position: relative !important;
+    }
+    #bookSearchInput,
+    .search-input {
+        height: 44px !important;
+        font-size: 1rem !important;
+        border-width: 2px !important;
+        border-radius: 50px 0 0 50px !important;
+        border-right: none !important;
+        padding-left: 1.1rem !important;
+        padding-right: 0 !important;
+        flex: 1 1 auto !important;
+        width: auto !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        box-sizing: border-box !important;
+    }
+    .btn.btn-primary {
+        height: 44px !important;
+        min-width: 44px !important;
+        width: 44px !important;
+        font-size: 1.2rem !important;
+        padding: 0 !important;
+        border-radius: 0 50px 50px 0 !important;
+        border-width: 2px !important;
+        border-left: none !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        margin-left: 0 !important;
+        box-sizing: border-box !important;
+    }
+    .input-group.search-box input,
+    .input-group.search-box button {
+        box-shadow: none !important;
+    }
     #books-container {
         display: flex !important;
         flex-wrap: wrap !important;
@@ -277,6 +390,33 @@
         transform: none !important;
         box-shadow: 0 0 15px rgba(255, 60, 0, 0.4) !important;
         border-color: var(--fire-primary, #ff3c00) !important;
+    }
+    #bookSuggestionsDropdown.suggestion-dropdown {
+        position: absolute !important;
+        top: 100% !important;
+        left: 0 !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        max-width: 100% !important;
+        z-index: 1002 !important;
+        margin-top: 2px !important;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.18) !important;
+    }
+    .search-filter-section .row.justify-content-center.mt-3 {
+        gap: 0.5rem !important;
+        margin-top: 0.7rem !important;
+    }
+    .search-filter-section .filter-select,
+    .search-filter-section select.form-select {
+        height: 36px !important;
+        min-width: 80px !important;
+        max-width: 120px !important;
+        font-size: 0.95rem !important;
+        padding: 0.3rem 0.7rem !important;
+        border-radius: 18px !important;
+        border-width: 1.5px !important;
+        margin: 0 2px !important;
+        box-shadow: none !important;
     }
 }
 
@@ -403,6 +543,84 @@
     min-width: 100px !important;
     width: 150px !important;
 }
+
+.book-request-modern-card {
+    background: rgba(24,25,26,0.85);
+    border-radius: 1.7rem;
+    box-shadow: 0 8px 32px 0 rgba(255,51,0,0.12), 0 1.5px 8px 0 rgba(0,0,0,0.18);
+    backdrop-filter: blur(6px);
+    border: 1.5px solid rgba(255,51,0,0.13);
+    transition: box-shadow 0.3s;
+}
+.book-request-modern-card:hover {
+    box-shadow: 0 12px 40px 0 rgba(255,51,0,0.22), 0 2px 12px 0 rgba(0,0,0,0.22);
+}
+.book-request-modern-card h2 {
+    font-family: 'Poppins',sans-serif;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: var(--fire-primary);
+    margin-bottom: 0.7rem;
+}
+.book-request-modern-card label {
+    font-weight: 600;
+    color: #fff;
+    margin-bottom: 0.2rem;
+    letter-spacing: 0.02em;
+}
+.book-request-modern-card .form-control {
+    border-radius: 1.5rem;
+    border: 1.5px solid var(--fire-primary);
+    background: rgba(30,30,30,0.92);
+    color: #f8f9fa;
+    font-size: 1.05em;
+    box-shadow: none;
+    transition: border 0.2s, box-shadow 0.2s;
+}
+.book-request-modern-card .form-control:focus {
+    border-color: var(--fire-accent);
+    box-shadow: 0 0 0 2px rgba(255,51,0,0.18);
+    background: #18191a;
+    color: #f8f9fa;
+}
+.book-request-modern-card .form-control::placeholder {
+    color: #f8f9fa !important;
+    opacity: 0.85 !important;
+    font-weight: 400;
+    letter-spacing: 0.5px;
+}
+.book-request-modern-card .btn-fire {
+    background: linear-gradient(135deg, var(--fire-primary), var(--fire-accent));
+    color: #fff;
+    border: none;
+    border-radius: 2rem;
+    font-weight: 700;
+    font-size: 1.1em;
+    padding: 0.7em 2.5em;
+    box-shadow: 0 2px 12px rgba(255,51,0,0.13);
+    transition: background 0.2s, transform 0.18s;
+    position: relative;
+    overflow: hidden;
+}
+.book-request-modern-card .btn-fire:hover, .book-request-modern-card .btn-fire:focus {
+    background: linear-gradient(135deg, var(--fire-accent), var(--fire-primary));
+    color: #fff;
+    transform: translateY(-2px) scale(1.04);
+    box-shadow: 0 4px 24px rgba(255,51,0,0.22);
+}
+.book-request-modern-card .btn-fire i {
+    margin-right: 0.5em;
+}
+.book-request-modern-card .alert-success {
+    animation: fadeInDown 0.7s cubic-bezier(.4,2,.3,1);
+    border-radius: 1.2rem;
+    font-weight: 600;
+    font-size: 1.08em;
+}
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
 </style>
 {% endblock %}
 
@@ -481,30 +699,6 @@ document.addEventListener('DOMContentLoaded', function() {
   const sortFilter = document.getElementById('bookSortOrder');
   const suggestionsDropdown = document.getElementById('bookSuggestionsDropdown');
   
-  console.log('🔍 DOM Elements found:');
-  console.log('  - searchInput:', searchInput);
-  console.log('  - searchButton:', searchButton);
-  console.log('  - suggestionsDropdown:', suggestionsDropdown);
-  console.log('  - dropdown display:', suggestionsDropdown?.style.display);
-  console.log('  - dropdown position:', suggestionsDropdown?.style.position);
-  console.log('  - dropdown z-index:', suggestionsDropdown?.style.zIndex);
-  
-  // Additional debugging
-  const searchBox = document.querySelector('.search-box');
-  console.log('🔍 Search box element:', searchBox);
-  console.log('🔍 Search box position:', searchBox?.style.position);
-  console.log('🔍 Search box overflow:', searchBox?.style.overflow);
-  console.log('🔍 Search box height:', searchBox?.offsetHeight);
-  console.log('🔍 Search box width:', searchBox?.offsetWidth);
-  
-  // Check parent containers
-  const searchSection = document.querySelector('.search-filter-section');
-  console.log('🔍 Search section:', searchSection);
-  console.log('🔍 Search section overflow:', searchSection?.style.overflow);
-  
-  const container = document.querySelector('.container');
-  console.log('🔍 Container overflow:', container?.style.overflow);
-  
   let searchTimeout;
   let suggestionList = [];
   let selectedIndex = -1;
@@ -520,26 +714,22 @@ document.addEventListener('DOMContentLoaded', function() {
   // Search input typing
   searchInput.addEventListener('input', function() {
     const val = searchInput.value;
-    console.log('🔍 Search input value:', val);
     
     // Handle suggestions only (no automatic search)
     if (!val) {
-      console.log('❌ Empty value, hiding suggestions');
       suggestionsDropdown.style.display = 'none';
       suggestionList = [];
       selectedIndex = -1;
     } else {
-      console.log('🔍 Fetching suggestions for:', val);
       fetch(`/api/books/suggestions/?q=${encodeURIComponent(val)}`)
         .then(res => res.json())
         .then(data => {
-          console.log('✅ Suggestions received:', data);
           suggestionList = data.suggestions || [];
           selectedIndex = -1; // Changed from 0 to -1 so no suggestion is highlighted by default
           showSuggestions(val);
         })
         .catch(err => { 
-          console.error('❌ Suggestion API error:', err); 
+          console.error('Suggestion API error:', err); 
         });
     }
     
@@ -601,12 +791,7 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function showSuggestions(val) {
-    console.log('🎯 showSuggestions called with:', val);
-    console.log('📋 suggestionList:', suggestionList);
-    console.log('🎯 selectedIndex:', selectedIndex);
-    
     if (!suggestionList.length || !val) {
-      console.log('❌ No suggestions or empty value, hiding dropdown');
       suggestionsDropdown.style.display = 'none';
       suggestionsDropdown.innerHTML = '';
       return;
@@ -616,10 +801,8 @@ document.addEventListener('DOMContentLoaded', function() {
       `<div class="suggestion-item${i === selectedIndex ? ' active' : ''}" data-index="${i}">${highlightSuggestion(val, s)}</div>`
     ).join('');
     
-    console.log('📝 Generated HTML:', html);
     suggestionsDropdown.innerHTML = html;
     suggestionsDropdown.style.display = 'block';
-    console.log('✅ Dropdown should now be visible');
   }
 
   // Suggestions click events
@@ -647,6 +830,49 @@ document.addEventListener('DOMContentLoaded', function() {
   searchInput.addEventListener('focus', function() {
     if (suggestionList.length) showSuggestions(searchInput.value);
   });
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.querySelector('.book-request-modern-card form');
+    if (form) {
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const formData = new FormData(form);
+            formData.append('book_request_submit', '1');
+            const csrfToken = form.querySelector('[name=csrfmiddlewaretoken]').value;
+            const response = await fetch(window.location.pathname, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': csrfToken
+                },
+                body: formData
+            });
+            const data = await response.json();
+            // Remove old alerts
+            form.querySelectorAll('.alert, .text-danger').forEach(el => el.remove());
+            if (data.success) {
+                form.reset();
+                const successDiv = document.createElement('div');
+                successDiv.className = 'alert alert-success text-center mb-4';
+                successDiv.innerHTML = '<i class="fas fa-check-circle me-2"></i>Thank you! Your request has been submitted.';
+                form.parentNode.insertBefore(successDiv, form);
+                setTimeout(() => {
+                    if (successDiv.parentNode) successDiv.parentNode.removeChild(successDiv);
+                }, 2000);
+            } else if (data.errors) {
+                for (const [field, errors] of Object.entries(data.errors)) {
+                    const input = form.querySelector(`[name=${field}]`);
+                    if (input) {
+                        const errorDiv = document.createElement('div');
+                        errorDiv.className = 'text-danger small';
+                        errorDiv.textContent = errors.join(' ');
+                        input.parentNode.appendChild(errorDiv);
+                    }
+                }
+            }
+        });
+    }
 });
 </script>
 {% endblock %} 

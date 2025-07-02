@@ -4,12 +4,13 @@ import markdown
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth import login as auth_login
 from django.urls import reverse
-from django.http import HttpResponseRedirect
+from django.http import HttpResponseRedirect, JsonResponse
 from django.contrib.auth.models import User
 from django.contrib import messages
 from django.shortcuts import redirect
 from django.db import IntegrityError
 from .models import UserProfile
+from messages_requests.models import ContactMessage
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import logout
 from django.contrib.auth import update_session_auth_hash
@@ -30,6 +31,7 @@ from operator import attrgetter
 from django.utils import timezone
 import random
 from django.core.paginator import Paginator
+from library_admin.forms import BookRequestForm
 
 # Create your views here.
 
@@ -114,9 +116,12 @@ def book_reviews(request):
     # Get all reviews
     reviews = BookReview.objects.all()
     
-    # Apply category filter
+    # Get categories for the filter dropdown (only active book categories)
+    review_categories = Category.objects.filter(type='book', active=True, books__isnull=False).distinct()
+
+    # Apply category filter (by id)
     if category != 'all':
-        reviews = reviews.filter(book__category__iexact=category)
+        reviews = reviews.filter(book__category=category)
     
     # Apply sorting
     if sort_by == 'oldest':
@@ -135,14 +140,6 @@ def book_reviews(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
-    # Get categories for the filter dropdown
-    reviewed_book_ids = BookReview.objects.values_list('book_id', flat=True).distinct()
-    review_categories = (
-        Book.objects.filter(id__in=reviewed_book_ids)
-        .exclude(category__isnull=True).exclude(category__exact='')
-        .values_list('category', flat=True).distinct()
-    )
-    
     return render(request, 'book_reviews.html', {
         'reviews': page_obj.object_list, 
         'page_obj': page_obj, 
@@ -151,14 +148,37 @@ def book_reviews(request):
     })
 
 def books(request):
-    from library_admin.models import Book
+    from library_admin.models import Book, Category
     book_categories = (
-        Book.objects.exclude(category__isnull=True).exclude(category__exact='')
-        .values_list('category', flat=True).distinct()
+        Category.objects.filter(type='book', active=True, books__isnull=False)
+        .distinct()
+        .values_list('name', flat=True)
     )
+    book_request_form = None
+    book_request_success = False
+    if request.user.is_authenticated:
+        if request.method == 'POST' and 'book_request_submit' in request.POST:
+            form = BookRequestForm(request.POST)
+            if form.is_valid():
+                book_request = form.save(commit=False)
+                book_request.user = request.user
+                book_request.save()
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    return JsonResponse({'success': True})
+                book_request_success = True
+                book_request_form = BookRequestForm()  # Reset form
+            else:
+                if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+                    errors = {field: [str(e) for e in errs] for field, errs in form.errors.items()}
+                    return JsonResponse({'success': False, 'errors': errors})
+                book_request_form = form
+        else:
+            book_request_form = BookRequestForm()
     return render(request, 'books.html', {
         'book_categories': book_categories,
-        'django_api_url': request.build_absolute_uri('/').rstrip('/')
+        'django_api_url': request.build_absolute_uri('/').rstrip('/'),
+        'book_request_form': book_request_form,
+        'book_request_success': book_request_success,
     })
 
 def news(request):
@@ -174,7 +194,7 @@ def news(request):
     
     # Apply category filter
     if category != 'all':
-        news_items = news_items.filter(category__iexact=category)
+        news_items = news_items.filter(category__name__iexact=category)
     
     # Apply sorting
     if sort_by == 'oldest':
@@ -191,8 +211,8 @@ def news(request):
     
     # Get all categories for the filter dropdown
     news_categories = (
-        News.objects.exclude(category__isnull=True).exclude(category__exact='')
-        .values_list('category', flat=True).distinct()
+        News.objects.exclude(category__isnull=True)
+        .values_list('category__name', flat=True).distinct()
     )
     
     return render(request, 'news.html', {
@@ -203,6 +223,20 @@ def news(request):
     })
 
 def contact(request):
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        email = request.POST.get('email')
+        subject = request.POST.get('subject')
+        message = request.POST.get('message')
+        if name and email and subject and message:
+            ContactMessage.objects.create(
+                name=name,
+                email=email,
+                subject=subject,
+                message=message
+            )
+            # Optionally, add a success message or redirect
+            return render(request, 'contact.html', {'success': True})
     return render(request, 'contact.html')
 
 def about(request):
@@ -213,6 +247,10 @@ def custom_login(request):
 
 @login_required
 def profile(request):
+    # Block superusers and staff from accessing public profile
+    if request.user.is_superuser or request.user.is_staff:
+        messages.error(request, 'Admins and staff cannot access the public profile page.')
+        return redirect('home')
     profile, created = UserProfile.objects.get_or_create(user=request.user)
     if request.method == 'POST':
         # Profile image update
@@ -269,6 +307,7 @@ def register(request):
         username = request.POST.get('username')
         email = request.POST.get('email')
         phone = request.POST.get('phone')
+        gender = request.POST.get('gender', 'male')
         password1 = request.POST.get('password1')
         password2 = request.POST.get('password2')
         if not phone:
@@ -288,6 +327,7 @@ def register(request):
                 'username': username,
                 'email': email,
                 'phone': phone,
+                'gender': gender,
             })
         # Check for existing inactive user by username or email
         inactive_user = User.objects.filter(username=username, is_active=False).first()
@@ -304,17 +344,21 @@ def register(request):
             if not inactive_user.username:
                 inactive_user.delete()
                 user = User.objects.create_user(username=username, email=email, password=password1, is_active=False)
-                UserProfile.objects.create(user=user, phone=phone)
+                if not user.is_superuser and not user.is_staff:
+                    UserProfile.objects.create(user=user, phone=phone, gender=gender)
             else:
                 inactive_user.save()
                 user = inactive_user
-                # Update or create UserProfile
-                profile, _ = UserProfile.objects.get_or_create(user=user)
-                profile.phone = phone
-                profile.save()
+                # Update or create UserProfile only for non-staff, non-superuser
+                if not user.is_superuser and not user.is_staff:
+                    profile, _ = UserProfile.objects.get_or_create(user=user)
+                    profile.phone = phone
+                    profile.gender = gender
+                    profile.save()
         else:
             user = User.objects.create_user(username=username, email=email, password=password1, is_active=False)
-            UserProfile.objects.create(user=user, phone=phone)
+            if not user.is_superuser and not user.is_staff:
+                UserProfile.objects.create(user=user, phone=phone, gender=gender)
         # Generate OTP
         otp_code = str(random.randint(100000, 999999))
         from public_site.models import EmailOTP
@@ -360,7 +404,9 @@ def activate_account(request, uidb64, token):
 def blog_detail(request, blog_id):
     blog = get_object_or_404(Article, id=blog_id)
     blog.content = markdown.markdown(blog.content, extensions=["extra", "codehilite", "toc"])
-    return render(request, 'blog_detail.html', {'blog': blog, 'blog_id': blog_id})
+    # Get related blogs (e.g., same category, excluding current blog)
+    related_blogs = Article.objects.filter(category=blog.category).exclude(id=blog.id)[:6] if blog.category else Article.objects.exclude(id=blog.id)[:6]
+    return render(request, 'blog_detail.html', {'blog': blog, 'blog_id': blog_id, 'blogs': related_blogs})
 
 def book_detail(request, book_id):
     book = get_object_or_404(Book, id=book_id)
@@ -378,10 +424,68 @@ def news_detail(request, news_id):
     return render(request, 'news_detail.html', {'news': news})
 
 def digital_resources(request):
-    return render(request, 'digital_resources.html')
+    """Digital Resources page with information about online resources"""
+    digital_resources_data = {
+        'e_books': {
+            'title': 'E-Books Collection',
+            'description': 'Access thousands of digital books from our online library',
+            'icon': 'fas fa-tablet-alt',
+            'features': ['PDF Downloads', 'Online Reading', 'Mobile Compatible', 'Offline Access']
+        },
+        'audiobooks': {
+            'title': 'Audiobooks',
+            'description': 'Listen to books narrated by professional voice actors',
+            'icon': 'fas fa-headphones',
+            'features': ['Professional Narration', 'Multiple Formats', 'Speed Control', 'Bookmarking']
+        },
+        'research_databases': {
+            'title': 'Research Databases',
+            'description': 'Access academic journals, research papers, and scholarly articles',
+            'icon': 'fas fa-database',
+            'features': ['Academic Journals', 'Research Papers', 'Citation Tools', 'Full-Text Access']
+        },
+        'online_courses': {
+            'title': 'Online Learning',
+            'description': 'Free online courses and educational content',
+            'icon': 'fas fa-graduation-cap',
+            'features': ['Free Courses', 'Certificates', 'Interactive Content', 'Progress Tracking']
+        }
+    }
+    return render(request, 'digital_resources.html', {'resources': digital_resources_data})
 
 def community_programs(request):
-    return render(request, 'community_programs.html')
+    """Community Programs page with information about library programs"""
+    programs_data = {
+        'reading_clubs': {
+            'title': 'Reading Clubs',
+            'description': 'Join our book clubs and discuss literature with fellow readers',
+            'icon': 'fas fa-users',
+            'schedule': 'Every Saturday, 2:00 PM',
+            'features': ['Monthly Book Selection', 'Group Discussions', 'Author Visits', 'Reading Challenges']
+        },
+        'writing_workshops': {
+            'title': 'Writing Workshops',
+            'description': 'Develop your writing skills with professional guidance',
+            'icon': 'fas fa-pen-fancy',
+            'schedule': 'Every Sunday, 10:00 AM',
+            'features': ['Creative Writing', 'Poetry Sessions', 'Storytelling', 'Publishing Guidance']
+        },
+        'children_programs': {
+            'title': 'Children\'s Programs',
+            'description': 'Educational and fun activities for children of all ages',
+            'icon': 'fas fa-child',
+            'schedule': 'Weekdays, 4:00 PM',
+            'features': ['Story Time', 'Arts & Crafts', 'Educational Games', 'Homework Help']
+        },
+        'technology_training': {
+            'title': 'Technology Training',
+            'description': 'Learn computer skills and digital literacy',
+            'icon': 'fas fa-laptop',
+            'schedule': 'Tuesdays & Thursdays, 6:00 PM',
+            'features': ['Basic Computer Skills', 'Internet Safety', 'Digital Tools', 'Online Resources']
+        }
+    }
+    return render(request, 'community_programs.html', {'programs': programs_data})
 
 def custom_logout(request):
     if request.method == 'POST':

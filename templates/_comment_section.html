@@ -1,0 +1,591 @@
+{% load static %}
+
+<!-- Comment Section -->
+<section class="blog-comments-section text-center" style="margin: 0.5rem auto 2rem auto; max-width: 700px;">
+    <h2 style="font-weight: 800; font-size: 2rem; margin-bottom: 1.5rem;">Leave a Comment</h2>
+    {% if user.is_authenticated %}
+    <form id="comment-form" class="mb-4">
+        <div class="mb-3">
+            <textarea class="form-control" id="comment-text" rows="3" placeholder="Write your comment..." required></textarea>
+        </div>
+        <div class="mb-3 d-flex justify-content-center align-items-center gap-2">
+            <span style="font-weight:600;">Your Rating:</span>
+            <div id="star-rating" style="font-size: 1.7rem; color: #ff9900; cursor:pointer;">
+                <i class="far fa-star" data-value="1"></i>
+                <i class="far fa-star" data-value="2"></i>
+                <i class="far fa-star" data-value="3"></i>
+                <i class="far fa-star" data-value="4"></i>
+                <i class="far fa-star" data-value="5"></i>
+            </div>
+        </div>
+        <button type="submit" class="btn btn-primary px-4 py-2" style="background: var(--fire-primary); border: none;">Submit</button>
+    </form>
+    {% else %}
+    <!-- Lock Display for Non-Authenticated Users -->
+    <div class="comment-lock-display mb-4" style="background: #222; border: 2px solid #cc3700; border-radius: 15px; padding: 2rem; text-align: center;">
+        <div style="font-size: 3rem; color: #cc3700; margin-bottom: 1rem;">
+            <i class="fas fa-lock"></i>
+        </div>
+        <h4 style="color: #ddd; margin-bottom: 1rem; font-weight: 600;">Comments Locked</h4>
+        <p style="color: #bbb; margin-bottom: 1.5rem;">Only registered users can leave comments. <a href="/login/?next={{ request.path }}" style="color: var(--fire-primary); text-decoration: none; font-weight: 600;">Login</a> to comment.</p>
+    </div>
+    {% endif %}
+    <div class="comments-container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="comments-title" style="font-size: 1.5rem; margin: 0; color: white;">Comments</h3>
+            <div class="d-flex align-items-center gap-3">
+                <div class="sort-comments">
+                    <select id="comment-sort" class="form-select form-select-sm" style="background: #222; color: white; border: 1px solid #333;">
+                        <option value="newest">Newest First</option>
+                        <option value="oldest">Oldest First</option>
+                    </select>
+                </div>
+                <span class="total-comments"></span>
+            </div>
+        </div>
+        <div id="comments-list">
+            <!-- Comments will be loaded here -->
+        </div>
+        <div id="show-more-container" class="mt-4" style="display: none;">
+            <button id="show-more-comments" class="btn btn-outline-primary">
+                Show More Comments <i class="fas fa-chevron-down ms-2"></i>
+            </button>
+        </div>
+    </div>
+</section>
+
+{% block extra_css %}
+<style>
+#star-rating i {
+    color: rgba(255, 255, 255, 0.4);
+    transition: color 0.2s, text-shadow 0.2s;
+}
+
+#star-rating i.selected,
+#star-rating i:hover,
+#star-rating i.hovered {
+    color: #FFD700;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.7);
+}
+
+.blog-comments-section {
+    background: #181818;
+    border: 2px solid var(--fire-primary);
+    border-radius: 20px;
+    box-shadow: 0 0 24px 0 #ff450033;
+    padding: 2rem;
+    margin-top: 2rem;
+}
+
+.comments-container {
+    text-align: left;
+    margin-top: 2rem;
+}
+
+.comment-thread {
+    position: relative;
+}
+
+.comment-bubble, .reply-bubble {
+    background: rgba(28, 28, 32, 0.7);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 102, 0, 0.6);
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25), 0 0 40px rgba(255, 102, 0, 0.15) inset;
+    padding: 1rem 1.25rem;
+    margin-bottom: 1.25rem;
+    display: flex;
+    gap: 1rem;
+    color: #fff;
+    transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+}
+
+.comment-bubble:hover, .reply-bubble:hover {
+    transform: translateY(-6px) scale(1.03);
+    box-shadow: 0 10px 35px rgba(255, 102, 0, 0.2), 0 0 60px rgba(255, 102, 0, 0.5) inset;
+    border-color: rgba(255, 102, 0, 0.6);
+}
+
+.reply-bubble {
+    background: rgba(40, 32, 28, 0.7);
+}
+
+.comment-rating .fas {
+    color: #FFD700;
+    text-shadow: 0 0 8px rgba(255, 215, 0, 0.7);
+}
+
+.comment-rating .far {
+    color: rgba(255, 255, 255, 0.4);
+}
+
+.comment-bubble {
+    max-width: 95%;
+}
+
+.replies-list {
+    margin-left: 2.5rem;
+    padding-left: 1.5rem;
+    border-left: 2px solid;
+    border-image: linear-gradient(to bottom, rgba(255, 102, 0, 0.4), rgba(255, 102, 0, 0)) 1;
+    margin-top: 1.25rem;
+}
+
+.comment-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.comment-header {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    width: 100%;
+    margin-bottom: 0.5rem;
+}
+
+.comment-author {
+    font-weight: 700;
+    color: #fff;
+    letter-spacing: 0.5px;
+}
+
+.comment-date {
+    font-size: 0.85em;
+    color: rgba(255, 255, 255, 0.65);
+}
+
+.comment-rating {
+    margin-left: auto;
+    padding-left: 1rem;
+    display: flex;
+    gap: 0.2rem;
+}
+
+.comment-text {
+    line-height: 1.65;
+    color: rgba(255, 255, 255, 0.95);
+    margin-bottom: 0.75rem;
+}
+
+.reply-to {
+    margin-top: -0.4rem;
+    margin-bottom: 0.6rem;
+    font-size: 0.9em;
+    font-weight: 500;
+    color: #ff944d;
+}
+
+.profile-img {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid rgba(255, 102, 0, 0.5);
+    box-shadow: 0 0 12px rgba(255, 102, 0, 0.4);
+    transition: box-shadow 0.3s ease;
+}
+.comment-bubble:hover .profile-img, .reply-bubble:hover .profile-img {
+    box-shadow: 0 0 20px rgba(255, 102, 0, 0.7);
+}
+
+.admin-reply-bubble:hover .profile-img {
+    box-shadow: 0 0 20px rgba(0, 170, 255, 0.7);
+}
+
+.reply-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.8);
+    font-size: 0.9em;
+    font-weight: 600;
+    cursor: pointer;
+    border-radius: 12px;
+    padding: 0.4rem 0.9rem;
+    align-self: flex-start;
+    transition: background-color 0.2s, color 0.2s, box-shadow 0.2s;
+}
+
+.reply-btn:hover {
+    background: #ff6600;
+    color: #fff;
+    border-color: #ff6600;
+    box-shadow: 0 0 15px rgba(255, 102, 0, 0.6);
+}
+
+.reply-form {
+    margin-top: 0.75rem;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 0.75rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 102, 0, 0.15);
+}
+
+.reply-form textarea {
+    background-color: rgba(0, 0, 0, 0.3);
+    color: #fff;
+    border: 1px solid rgba(255, 102, 0, 0.25);
+    border-radius: 8px;
+    resize: none;
+}
+
+.reply-form textarea:focus {
+    background-color: rgba(0, 0, 0, 0.5);
+    border-color: #ff6600;
+    box-shadow: 0 0 10px rgba(255, 102, 0, 0.4);
+}
+
+.reply-form .btn-primary,
+.reply-form .btn-secondary {
+    border-radius: 8px;
+    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.85em;
+    border: none;
+    transition: all 0.2s ease;
+}
+
+.reply-form .btn-primary {
+    background-color: #ff6600;
+    color: #fff;
+}
+
+.reply-form .btn-primary:hover {
+    background-color: #ff944d;
+    box-shadow: 0 0 10px rgba(255, 102, 0, 0.5);
+}
+
+.reply-form .btn-secondary {
+    background-color: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.reply-form .btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+    color: #fff;
+}
+
+.admin-reply-container {
+    margin-left: 2.5rem;
+    padding-left: 1.5rem;
+    border-left: 2px solid;
+    border-image: linear-gradient(to bottom, rgba(0, 170, 255, 0.4), rgba(0, 170, 255, 0)) 1;
+    margin-top: 1.25rem;
+}
+
+.admin-reply-bubble {
+    margin-left: 0;
+    margin-top: 0;
+    border: 1px solid rgba(0, 170, 255, 0.4);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2), 0 0 40px rgba(0, 170, 255, 0.1) inset;
+}
+.admin-reply-bubble:hover {
+    transform: translateY(-6px) scale(1.02);
+    box-shadow: 0 10px 35px rgba(0, 170, 255, 0.2), 0 0 60px rgba(0, 170, 255, 0.4) inset;
+    border-color: rgba(0, 170, 255, 0.6);
+}
+.admin-reply-bubble .profile-img {
+    border-color: rgba(0, 170, 255, 0.5);
+    box-shadow: 0 0 12px rgba(0, 170, 255, 0.4);
+    transform: scale(1.2);
+}
+.admin-reply-bubble .comment-author {
+    color: #85C1E9;
+}
+
+.admin-reply-bubble:hover .profile-img {
+    box-shadow: 0 0 20px rgba(0, 170, 255, 0.7);
+}
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const objectId = "{{ object_id }}";
+    const contentType = "{{ content_type }}";
+    const isAuthenticated = JSON.parse("{{ user.is_authenticated|yesno:'true,false' }}");
+    const csrftoken = "{{ csrf_token }}";
+    
+    // Determine the correct API endpoint based on content type
+    let apiEndpoint;
+    switch (contentType) {
+        case 'article':
+            apiEndpoint = `/api/articles/${objectId}/comments/`;
+            break;
+        case 'book':
+            apiEndpoint = `/api/books/${objectId}/comments/`;
+            break;
+        case 'news':
+            apiEndpoint = `/api/news/${objectId}/comments/`;
+            break;
+        case 'bookreview':
+            apiEndpoint = `/api/bookreviews/${objectId}/comments/`;
+            break;
+        default:
+            console.error('Unknown content type for comments');
+            return;
+    }
+
+    // Star rating functionality
+    let selectedRating = 0;
+    const stars = document.querySelectorAll('#star-rating i');
+    if (stars.length > 0) {
+        stars.forEach(star => {
+            star.addEventListener('mouseover', function() {
+                const value = this.getAttribute('data-value');
+                stars.forEach(s => {
+                    s.classList.toggle('hovered', s.getAttribute('data-value') <= value);
+                });
+            });
+            star.addEventListener('mouseout', function() {
+                stars.forEach(s => s.classList.remove('hovered'));
+            });
+            star.addEventListener('click', function() {
+                selectedRating = parseInt(this.getAttribute('data-value'));
+                stars.forEach(s => {
+                    s.classList.toggle('selected', s.getAttribute('data-value') <= selectedRating);
+                });
+            });
+        });
+    }
+
+    let allComments = [];
+
+    function sortAndDisplayComments() {
+        const sortOrder = document.getElementById('comment-sort').value;
+        allComments.sort((a, b) => {
+            const dateA = new Date(a.date);
+            const dateB = new Date(b.date);
+            return sortOrder === 'newest' ? dateB - dateA : dateA - dateB;
+        });
+        const commentsList = document.getElementById('comments-list');
+        commentsList.innerHTML = renderCommentsFlat(allComments);
+    }
+
+    function flattenReplies(replies, parentName) {
+        let flat = [];
+        for (const reply of replies) {
+            flat.push({ ...reply, parent_name: parentName });
+            if (reply.replies && reply.replies.length) {
+                flat = flat.concat(flattenReplies(reply.replies, reply.name));
+            }
+        }
+        return flat;
+    }
+
+    function renderCommentsFlat(comments) {
+        return comments.map(comment => {
+             let starsHtml = '';
+             for (let i = 0; i < 5; i++) {
+                 starsHtml += i < comment.rating ? '<i class="fas fa-star"></i>' : '<i class="far fa-star"></i>';
+             }
+             let adminReplyHtml = '';
+             if (comment.admin_replies && comment.admin_replies.length > 0) {
+                 const adminAvatarUrl = "{% static 'images/websitemainlogo.jpg' %}";
+                 const repliesInnerHtml = comment.admin_replies.map(reply => `
+                    <div class="reply-bubble admin-reply-bubble">
+                        <img src="${adminAvatarUrl}" class="profile-img" alt="Admin" />
+                        <div class="comment-content">
+                            <div class="comment-header">
+                                <span class="comment-author">Admin <i class="fas fa-shield-alt" style="color: #85C1E9; font-size: 0.9em; margin-left: 5px;" title="Admin"></i></span>
+                                <span class="comment-date">${reply.date}</span>
+                            </div>
+                            <div class="reply-to">reply to @${comment.name}</div>
+                            <div class="comment-text">${reply.reply}</div>
+                            ${isAuthenticated ? `<button class="reply-btn comment-reply-btn" data-reply-id="admin-${reply.date.replace(/[^\d]/g, '')}" data-parent-comment-id="${comment.id}" data-mention="${reply.admin_name}"><i class='fas fa-reply'></i> Reply</button>` : ''}
+                            ${isAuthenticated ? `<div id="reply-form-admin-${reply.date.replace(/[^\d]/g, '')}" class="reply-form" style="display:none;">
+                                <textarea id="reply-input-admin-${reply.date.replace(/[^\d]/g, '')}" class="form-control mb-2" rows="2" placeholder="Write your reply..."></textarea>
+                                <button class="btn btn-primary btn-sm send-reply-btn" data-reply-id="admin-${reply.date.replace(/[^\d]/g, '')}" data-parent-comment-id="${comment.id}">Send Reply</button>
+                                <button class="btn btn-secondary btn-sm cancel-reply-btn" data-reply-id="admin-${reply.date.replace(/[^\d]/g, '')}">Cancel</button>
+                                <span id="reply-error-admin-${reply.date.replace(/[^\d]/g, '')}" class="text-danger ms-2" style="font-size:0.95em;"></span>
+                            </div>` : ''}
+                        </div>
+                    </div>
+                 `).join('');
+                 adminReplyHtml = `<div class="admin-reply-container">${repliesInnerHtml}</div>`;
+             }
+             let repliesHtml = '';
+             if (comment.replies && comment.replies.length) {
+                 let flatReplies = flattenReplies(comment.replies, comment.name);
+                 flatReplies = flatReplies.sort((a, b) => new Date(a.date) - new Date(b.date));
+                 repliesHtml = `<div class="replies-list">${flatReplies.map(reply => {
+                     let replyTo = reply.parent_name ? `<div class='reply-to'>reply to @${reply.parent_name}</div>` : '';
+                     return `
+                         <div class="reply-bubble">
+                             <img src="${reply.profile_image}" class="profile-img" alt="Profile" />
+                             <div class="comment-content">
+                                 <div class="comment-header">
+                                     <span class="comment-author">${reply.name}</span>
+                                     <span class="comment-date">${reply.date}</span>
+                                 </div>
+                                 ${replyTo}
+                                 <div class="comment-text">${reply.comment}</div>
+                                 ${isAuthenticated ? `<button class="reply-btn comment-reply-btn" data-reply-id="${reply.id}" data-mention="${reply.name}"><i class='fas fa-reply'></i> Reply</button>` : ''}
+                                 ${isAuthenticated ? `<div id="reply-form-${reply.id}" class="reply-form" style="display:none;">
+                                     <textarea id="reply-input-${reply.id}" class="form-control mb-2" rows="2" placeholder="Write your reply..."></textarea>
+                                     <button class="btn btn-primary btn-sm send-reply-btn" data-reply-id="${reply.id}">Send Reply</button>
+                                     <button class="btn btn-secondary btn-sm cancel-reply-btn" data-reply-id="${reply.id}">Cancel</button>
+                                     <span id="reply-error-${reply.id}" class="text-danger ms-2" style="font-size:0.95em;"></span>
+                                 </div>` : ''}
+                             </div>
+                         </div>
+                     `;
+                 }).join('')}</div>`;
+             }
+             return `
+                 <div class="comment-thread">
+                 <div class="comment-bubble">
+                     <img src="${comment.profile_image}" class="profile-img" alt="Profile" />
+                     <div class="comment-content">
+                         <div class="comment-header">
+                             <span class="comment-author">${comment.name}</span>
+                             <span class="comment-date">${comment.date}</span>
+                             <div class="comment-rating">${starsHtml}</div>
+                         </div>
+                         <div class="comment-text" id="comment-text-${comment.id}">${comment.comment}</div>
+                         ${isAuthenticated ? `<button class="reply-btn comment-reply-btn" data-reply-id="${comment.id}" data-mention="${comment.name}"><i class='fas fa-reply'></i> Reply</button>` : ''}
+                         <div id="reply-form-${comment.id}" class="reply-form" style="display:none;">
+                             <textarea id="reply-input-${comment.id}" class="form-control mb-2" rows="2" placeholder="Write your reply..."></textarea>
+                             <button class="btn btn-primary btn-sm send-reply-btn" data-reply-id="${comment.id}">Send Reply</button>
+                             <button class="btn btn-secondary btn-sm cancel-reply-btn" data-reply-id="${comment.id}">Cancel</button>
+                             <span id="reply-error-${comment.id}" class="text-danger ms-2" style="font-size:0.95em;"></span>
+                         </div>
+                     </div>
+                     </div>
+                     ${adminReplyHtml}
+                     ${repliesHtml}
+                 </div>
+             `;
+         }).join('');
+    }
+
+    function loadComments() {
+        fetch(apiEndpoint)
+            .then(response => response.json())
+            .then(comments => {
+                allComments = comments;
+                sortAndDisplayComments();
+            })
+            .catch(error => {
+                console.error('Error loading comments:', error);
+                document.getElementById('comments-list').innerHTML = 
+                    '<p class="text-danger">Error loading comments. Please try again later.</p>';
+            });
+    }
+
+    // Prevent double POST: handle form submit with preventDefault and only send via fetch
+    const commentForm = document.getElementById('comment-form');
+    if (commentForm) {
+        commentForm.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const commentText = document.getElementById('comment-text').value.trim();
+            if (!commentText) return;
+            if (selectedRating === 0 && contentType !== 'news') return; // rating required except for news
+            const data = {
+                comment: commentText,
+            };
+            if (selectedRating > 0) data.rating = selectedRating;
+            fetch(apiEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken,
+                },
+                body: JSON.stringify(data),
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    document.getElementById('comment-text').value = '';
+                    if (stars.length > 0) stars.forEach(s => s.classList.remove('selected'));
+                    selectedRating = 0;
+                    // Optionally reload comments here
+                    loadComments();
+                } else {
+                    alert(result.error || 'Failed to post comment.');
+                }
+            })
+            .catch(() => alert('Failed to post comment.'));
+        });
+    }
+    
+    document.getElementById('comment-sort').addEventListener('change', sortAndDisplayComments);
+
+    document.addEventListener('click', function(e) {
+        const target = e.target;
+        if (target.matches('.comment-reply-btn, .comment-reply-btn *')) {
+            const button = target.closest('.comment-reply-btn');
+            let commentId = button.dataset.replyId;
+            // If admin reply, extract the parent user comment id from the data attribute
+            if (commentId.startsWith('admin-')) {
+                const parentCommentId = button.getAttribute('data-parent-comment-id');
+                // Hide all forms, then show only the admin reply's form
+                document.querySelectorAll('.reply-form').forEach(f => f.style.display = 'none');
+                const form = document.getElementById(`reply-form-admin-${commentId.replace('admin-', '')}`);
+                if (form) {
+                    form.style.display = 'block';
+                    const textarea = form.querySelector('textarea');
+                    textarea.value = '';
+                    textarea.focus();
+                }
+                return;
+            }
+            document.querySelectorAll('.reply-form').forEach(f => f.style.display = 'none');
+            const form = document.getElementById(`reply-form-${commentId}`);
+            if (form) {
+                form.style.display = 'block';
+                const textarea = form.querySelector('textarea');
+                textarea.value = '';
+                textarea.focus();
+            }
+        }
+        if (target.matches('.cancel-reply-btn, .cancel-reply-btn *')) {
+            const button = target.closest('.cancel-reply-btn');
+            const commentId = button.dataset.replyId;
+            document.getElementById(`reply-form-${commentId}`).style.display = 'none';
+        }
+        if (target.matches('.send-reply-btn, .send-reply-btn *')) {
+            const button = target.closest('.send-reply-btn');
+            let parentId = button.dataset.replyId;
+            let text, errorSpan;
+            // If admin reply, use the parent comment id for backend
+            if (parentId.startsWith('admin-')) {
+                parentId = button.getAttribute('data-parent-comment-id');
+                text = document.getElementById(`reply-input-admin-${button.dataset.replyId.replace('admin-', '')}`).value.trim();
+                errorSpan = document.getElementById(`reply-error-admin-${button.dataset.replyId.replace('admin-', '')}`);
+            } else {
+                text = document.getElementById(`reply-input-${parentId}`).value.trim();
+                errorSpan = document.getElementById(`reply-error-${parentId}`);
+            }
+            if (!text) {
+                errorSpan.textContent = 'Reply cannot be empty.';
+                return;
+            }
+            errorSpan.textContent = '';
+            fetch(apiEndpoint, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ comment: text, parent_id: parentId })
+            })
+            .then(response => {
+                if (!response.ok) return response.json().then(err => { throw new Error(err.error || 'Unknown error'); });
+                return response.json();
+            })
+            .then(() => loadComments())
+            .catch(error => {
+                console.error('Error posting reply:', error);
+                errorSpan.textContent = error.message;
+            });
+        }
+    });
+
+    loadComments();
+});
+</script>
+{% endblock %} 

@@ -79,23 +79,32 @@ A modern, responsive Django-based public library management system with a beauti
    pip install -r requirements.txt
    ```
 
-4. **Run migrations**
+4. **Set up environment variables**
+   ```bash
+   # Copy the example environment file
+   cp env.example .env
+   
+   # Edit .env file with your configuration
+   # Important: Change the SECRET_KEY and EMAIL_HOST_PASSWORD
+   ```
+
+5. **Run migrations**
    ```bash
    python manage.py makemigrations
    python manage.py migrate
    ```
 
-5. **Create superuser**
+6. **Create superuser**
    ```bash
    python manage.py createsuperuser
    ```
 
-6. **Run the development server**
+7. **Run the development server**
    ```bash
    python manage.py runserver
    ```
 
-7. **Access the application**
+8. **Access the application**
    - Main site: http://127.0.0.1:8000/
    - Admin panel: http://127.0.0.1:8000/admin/
 
@@ -148,26 +157,45 @@ public_library_bagarji/
 ## 🔧 Configuration
 
 ### Environment Variables
-Create a `.env` file in the root directory:
+Create a `.env` file in the root directory by copying `env.example`:
 
 ```env
-SECRET_KEY=your-secret-key
+# Django Settings
+SECRET_KEY=your-secret-key-here
 DEBUG=True
-ALLOWED_HOSTS=localhost,127.0.0.1
+ALLOWED_HOSTS=localhost,127.0.0.1,192.168.100.22
+
+# Email Configuration
+EMAIL_HOST=smtp.gmail.com
+EMAIL_PORT=587
+EMAIL_USE_TLS=True
+EMAIL_HOST_USER=your-email@gmail.com
+EMAIL_HOST_PASSWORD=your-app-password
+DEFAULT_FROM_EMAIL=Public Library Bagarji <your-email@gmail.com>
+
+# Database (for production, use PostgreSQL)
 DATABASE_URL=sqlite:///db.sqlite3
 ```
 
-### Email Configuration
-For email verification, configure your email settings in `settings.py`:
+### Security Setup
+1. **Generate a new SECRET_KEY**:
+   ```python
+   from django.core.management.utils import get_random_secret_key
+   print(get_random_secret_key())
+   ```
 
-```python
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_PORT = 587
-EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'your-email@gmail.com'
-EMAIL_HOST_PASSWORD = 'your-app-password'
-```
+2. **Set up Gmail App Password**:
+   - Go to Google Account settings
+   - Enable 2-factor authentication
+   - Generate an App Password for your application
+   - Use this password in EMAIL_HOST_PASSWORD
+
+3. **Production Settings**:
+   - Set `DEBUG=False`
+   - Use a strong SECRET_KEY
+   - Configure a production database (PostgreSQL recommended)
+   - Set up HTTPS
+   - Configure proper ALLOWED_HOSTS
 
 ## 🚀 Deployment
 

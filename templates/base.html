@@ -75,6 +75,30 @@
             box-shadow: 0 0 0 2px var(--fire-primary) !important;
             border: 1px solid var(--fire-primary) !important;
         }
+
+        .auth-dropdown-menu {
+            background: var(--bg-card) !important;
+            box-shadow: 0 8px 32px 0 rgba(255,51,0,0.12), 0 2px 8px rgba(0,0,0,0.10) !important;
+            border-radius: 1.2rem !important;
+            min-width: 220px !important;
+            padding: 1rem 0.7rem !important;
+        }
+        .auth-dropdown-menu .dropdown-item {
+            font-size: 1.08rem;
+            font-weight: 600;
+            color: var(--text-primary) !important;
+            transition: background 0.18s, color 0.18s;
+            border-radius: 0.7rem !important;
+            padding-left: 1.1rem !important;
+        }
+        .auth-dropdown-menu .dropdown-item:hover {
+            background: var(--fire-gradient) !important;
+            color: var(--bg-primary) !important;
+        }
+        .auth-dropdown-menu .dropdown-divider {
+            border-top: 1.5px solid var(--fire-primary) !important;
+            margin: 0.3rem 0 !important;
+        }
     </style>
 
     {% block extra_css %}{% endblock %}
@@ -138,12 +162,21 @@
                         </li>
                     {% else %}
                         <li class="nav-item dropdown">
-                            <a class="nav-link dropdown-toggle" href="#" id="authDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                                Login / Register
+                            <a class="nav-link dropdown-toggle d-flex align-items-center gap-2" href="#" id="authDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-user-circle me-1"></i> <span>Login / Register</span>
                             </a>
-                            <ul class="dropdown-menu" aria-labelledby="authDropdown">
-                                <li><a class="dropdown-item" href="{% url 'login' %}">Login</a></li>
-                                <li><a class="dropdown-item" href="{% url 'register' %}">Register</a></li>
+                            <ul class="dropdown-menu dropdown-menu-end p-3 shadow-lg border-0 rounded-4 auth-dropdown-menu" aria-labelledby="authDropdown" style="min-width: 220px; background: var(--bg-card);">
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 rounded-3 fw-semibold" href="{% url 'login' %}">
+                                        <i class="fas fa-sign-in-alt text-primary"></i> Login
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider my-2"></li>
+                                <li>
+                                    <a class="dropdown-item d-flex align-items-center gap-2 py-2 rounded-3 fw-semibold" href="{% url 'register' %}">
+                                        <i class="fas fa-user-plus text-success"></i> Register
+                                    </a>
+                                </li>
                             </ul>
                         </li>
                     {% endif %}
@@ -208,8 +241,8 @@
         </div>
     </footer>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    <!-- Bootstrap Bundle JS (enables dropdowns, modals, etc.) -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
     <!-- Custom JS -->
     <script src="{% static 'js/main.js' %}"></script>
     <script>

@@ -34,6 +34,13 @@
         <input type="text" class="form-control" id="id_phone" name="phone" required style="background-color: #fff;" value="{{ phone|default:'' }}">
       </div>
       <div class="mb-3">
+        <label for="id_gender" class="form-label" style="color: #fff;">Gender</label>
+        <select class="form-select" id="id_gender" name="gender" required style="background-color: #fff;">
+          <option value="male" {% if gender == 'male' or not gender %}selected{% endif %}>Male</option>
+          <option value="female" {% if gender == 'female' %}selected{% endif %}>Female</option>
+        </select>
+      </div>
+      <div class="mb-3">
         <label for="id_password1" class="form-label" style="color: #fff;">Password</label>
         <input type="password" class="form-control" id="id_password1" name="password1" required style="background-color: #fff;">
         {% if password_error %}
