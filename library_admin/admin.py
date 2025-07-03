@@ -239,8 +239,22 @@ class BaseCommentAdmin(SimpleHistoryAdmin):
                     return redirect(request.path)
             elif 'delete_admin_reply' in request.POST:
                 reply_id = request.POST.get('delete_admin_reply')
-                CommentReply.objects.filter(id=reply_id, comment_id=comment.id).delete()
-                message = 'Admin reply deleted.'
+                # Find the admin reply object
+                admin_reply = CommentReply.objects.filter(id=reply_id, comment_id=comment.id).first()
+                if admin_reply:
+                    # Find all user replies to this admin reply
+                    user_reply_model = self.model
+                    user_replies = user_reply_model.objects.filter(parent=comment, parent_is_admin_reply=True)
+                    # Recursively delete all user replies and their children
+                    for user_reply in user_replies:
+                        def delete_with_children(reply):
+                            for child in reply.replies.all():
+                                delete_with_children(child)
+                            reply.delete()
+                        delete_with_children(user_reply)
+                    # Now delete the admin reply
+                    admin_reply.delete()
+                message = 'Admin reply and its user replies deleted.'
                 return redirect(request.path)
             elif 'delete_public_reply' in request.POST:
                 reply_id = request.POST.get('delete_public_reply')

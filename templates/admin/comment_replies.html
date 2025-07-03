@@ -5,6 +5,9 @@
     <strong>{{ comment.user }}:</strong> {{ comment.comment }}<br>
     <small>{{ comment.date }}</small>
   </div>
+  <style>
+    .reply-to-admin { color: #1890ff; font-weight: 600; }
+  </style>
   {% if message %}
     <div style="color: green; margin-bottom: 1em;">{{ message }}</div>
   {% endif %}
@@ -16,7 +19,11 @@
           <strong>{{ reply.user }}:</strong> {{ reply.comment }}<br>
           <small>{{ reply.date }}</small><br>
           {% if reply.parent %}
-            <span style="color: #888; font-size: 0.95em;">Reply to @{{ reply.parent.user.username|default:reply.parent.name }}</span>
+            {% if reply.parent_is_admin_reply %}
+              <span class="reply-to-admin">Reply to @Admin</span>
+            {% else %}
+              <span style="color: #888; font-size: 0.95em;">Reply to @{{ reply.parent.user.username|default:reply.parent.name }}</span>
+            {% endif %}
           {% endif %}
           <form method="post" style="position: absolute; right: 0; top: 0;">
             {% csrf_token %}

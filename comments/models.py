@@ -14,6 +14,7 @@ class BookReviewComment(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     parent = models.ForeignKey('self', null=True, blank=True, related_name='replies', on_delete=models.CASCADE)
     is_active = models.BooleanField(default=True)
+    parent_is_admin_reply = models.BooleanField(default=False)
     history = HistoricalRecords()
 
     def __str__(self):
@@ -28,6 +29,7 @@ class BlogComment(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     parent = models.ForeignKey('self', null=True, blank=True, related_name='replies', on_delete=models.CASCADE)
     is_active = models.BooleanField(default=True)
+    parent_is_admin_reply = models.BooleanField(default=False)
     history = HistoricalRecords()
 
     def __str__(self):
@@ -42,6 +44,7 @@ class NewsComment(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     parent = models.ForeignKey('self', null=True, blank=True, related_name='replies', on_delete=models.CASCADE)
     is_active = models.BooleanField(default=True)
+    parent_is_admin_reply = models.BooleanField(default=False)
     history = HistoricalRecords()
 
     def __str__(self):
@@ -56,6 +59,7 @@ class BookComment(models.Model):
     date = models.DateTimeField(auto_now_add=True)
     parent = models.ForeignKey('self', null=True, blank=True, related_name='replies', on_delete=models.CASCADE)
     is_active = models.BooleanField(default=True)
+    parent_is_admin_reply = models.BooleanField(default=False)
     history = HistoricalRecords()
 
     def __str__(self):

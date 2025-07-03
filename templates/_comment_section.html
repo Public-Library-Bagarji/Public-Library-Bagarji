@@ -298,6 +298,8 @@
 .admin-reply-bubble:hover .profile-img {
     box-shadow: 0 0 20px rgba(0, 170, 255, 0.7);
 }
+
+.reply-to-admin { color: #85C1E9; font-weight: 600; }
 </style>
 {% endblock %}
 
@@ -365,17 +367,6 @@ document.addEventListener('DOMContentLoaded', function() {
         commentsList.innerHTML = renderCommentsFlat(allComments);
     }
 
-    function flattenReplies(replies, parentName) {
-        let flat = [];
-        for (const reply of replies) {
-            flat.push({ ...reply, parent_name: parentName });
-            if (reply.replies && reply.replies.length) {
-                flat = flat.concat(flattenReplies(reply.replies, reply.name));
-            }
-        }
-        return flat;
-    }
-
     function renderCommentsFlat(comments) {
         return comments.map(comment => {
              let starsHtml = '';
@@ -393,7 +384,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <span class="comment-author">Admin <i class="fas fa-shield-alt" style="color: #85C1E9; font-size: 0.9em; margin-left: 5px;" title="Admin"></i></span>
                                 <span class="comment-date">${reply.date}</span>
                             </div>
-                            <div class="reply-to">reply to @${comment.name}</div>
+                            <div class="reply-to${reply.parent_name === 'Admin' ? ' reply-to-admin' : ''}">reply to @${reply.parent_name}</div>
                             <div class="comment-text">${reply.reply}</div>
                             ${isAuthenticated ? `<button class="reply-btn comment-reply-btn" data-reply-id="admin-${reply.date.replace(/[^\d]/g, '')}" data-parent-comment-id="${comment.id}" data-mention="${reply.admin_name}"><i class='fas fa-reply'></i> Reply</button>` : ''}
                             ${isAuthenticated ? `<div id="reply-form-admin-${reply.date.replace(/[^\d]/g, '')}" class="reply-form" style="display:none;">
@@ -409,10 +400,11 @@ document.addEventListener('DOMContentLoaded', function() {
              }
              let repliesHtml = '';
              if (comment.replies && comment.replies.length) {
-                 let flatReplies = flattenReplies(comment.replies, comment.name);
+                 // Use backend's flat replies directly
+                 let flatReplies = comment.replies;
                  flatReplies = flatReplies.sort((a, b) => new Date(a.date) - new Date(b.date));
                  repliesHtml = `<div class="replies-list">${flatReplies.map(reply => {
-                     let replyTo = reply.parent_name ? `<div class='reply-to'>reply to @${reply.parent_name}</div>` : '';
+                     let replyTo = reply.parent_name ? `<div class='reply-to${reply.parent_name === 'Admin' ? ' reply-to-admin' : ''}'>reply to @${reply.parent_name}</div>` : '';
                      return `
                          <div class="reply-bubble">
                              <img src="${reply.profile_image}" class="profile-img" alt="Profile" />
@@ -550,12 +542,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (target.matches('.send-reply-btn, .send-reply-btn *')) {
             const button = target.closest('.send-reply-btn');
             let parentId = button.dataset.replyId;
-            let text, errorSpan;
-            // If admin reply, use the parent comment id for backend
+            let text, errorSpan, parentIsAdminReply = false;
+            // If admin reply, use the parent comment id for backend and set flag
             if (parentId.startsWith('admin-')) {
                 parentId = button.getAttribute('data-parent-comment-id');
                 text = document.getElementById(`reply-input-admin-${button.dataset.replyId.replace('admin-', '')}`).value.trim();
                 errorSpan = document.getElementById(`reply-error-admin-${button.dataset.replyId.replace('admin-', '')}`);
+                parentIsAdminReply = true;
             } else {
                 text = document.getElementById(`reply-input-${parentId}`).value.trim();
                 errorSpan = document.getElementById(`reply-error-${parentId}`);
@@ -565,13 +558,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             errorSpan.textContent = '';
+            const postData = { comment: text, parent_id: parentId };
+            if (parentIsAdminReply) postData.parent_is_admin_reply = true;
             fetch(apiEndpoint, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrftoken
                 },
-                body: JSON.stringify({ comment: text, parent_id: parentId })
+                body: JSON.stringify(postData)
             })
             .then(response => {
                 if (!response.ok) return response.json().then(err => { throw new Error(err.error || 'Unknown error'); });

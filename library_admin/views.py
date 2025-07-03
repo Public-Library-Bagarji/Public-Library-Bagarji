@@ -42,11 +42,28 @@ def clean_markdown_preview(text):
     
     return cleaned.strip()
 
-def flatten_replies_for_api(comment):
+def flatten_replies_for_api(comment, parent=None):
     flat = []
     for reply in comment.replies.all().order_by('date'):
-        flat.append(reply)
-        flat.extend(flatten_replies_for_api(reply))
+        # Determine parent_name: immediate parent (could be user or name field)
+        if getattr(reply, 'parent_is_admin_reply', False):
+            parent_name = 'Admin'
+        elif parent:
+            parent_name = parent.user.username if getattr(parent, 'user', None) and parent.user else parent.name
+        else:
+            parent_name = comment.user.username if getattr(comment, 'user', None) and comment.user else comment.name
+        # Build reply dict with parent_name
+        reply_dict = {
+            'id': reply.id,
+            'name': reply.user.username if reply.user else reply.name,
+            'comment': reply.comment,
+            'rating': reply.rating,
+            'date': reply.date.strftime('%Y-%m-%d %H:%M'),
+            'profile_image': reply.user.userprofile.profile_image.url if reply.user and hasattr(reply.user, 'userprofile') and reply.user.userprofile.profile_image else '/static/images/default-avatar.png',
+            'parent_name': parent_name
+        }
+        flat.append(reply_dict)
+        flat.extend(flatten_replies_for_api(reply, parent=reply))
     return flat
 
 @csrf_exempt
@@ -327,18 +344,15 @@ def article_comments_api(request, article_id):
     if request.method == "GET":
         try:
             article = Article.objects.get(id=article_id)
-            # IMPORTANT: Filter for active comments and prefetch active replies for efficiency
             comments = article.comments.filter(is_active=True, parent__isnull=True).prefetch_related(
                 models.Prefetch('replies', queryset=BlogComment.objects.filter(is_active=True).order_by('date'))
             )
-            
             def serialize_comment_flat(comment):
                 admin_replies = CommentReply.objects.filter(
                     comment_id=comment.id,
                     comment_type='blog',
                     is_active=True
                 ).order_by('date')
-                # Flat user replies
                 flat_user_replies = flatten_replies_for_api(comment)
                 return {
                     'id': comment.id,
@@ -347,22 +361,13 @@ def article_comments_api(request, article_id):
                     'rating': comment.rating,
                     'date': comment.date.strftime('%Y-%m-%d %H:%M'),
                     'profile_image': comment.user.userprofile.profile_image.url if comment.user and hasattr(comment.user, 'userprofile') and comment.user.userprofile.profile_image else '/static/images/default-avatar.png',
-                    'replies': [{
-                        'id': reply.id,
-                        'name': reply.user.username if reply.user else reply.name,
-                        'comment': reply.comment,
-                        'rating': reply.rating,
-                        'date': reply.date.strftime('%Y-%m-%d %H:%M'),
-                        'profile_image': reply.user.userprofile.profile_image.url if reply.user and hasattr(reply.user, 'userprofile') and reply.user.userprofile.profile_image else '/static/images/default-avatar.png',
-                        'parent_name': reply.parent.name if reply.parent else comment.name
-                    } for reply in flat_user_replies],
+                    'replies': flat_user_replies,
                     'admin_replies': [{
                         'reply': r.reply,
                         'admin_name': r.admin_name,
                         'date': r.date.strftime('%Y-%m-%d %H:%M')
                     } for r in admin_replies]
                 }
-
             comments_list = [serialize_comment_flat(comment) for comment in comments]
             return JsonResponse(comments_list, safe=False)
         except Article.DoesNotExist:
@@ -372,13 +377,15 @@ def article_comments_api(request, article_id):
             return JsonResponse({'success': False, 'error': 'Authentication required.'}, status=403)
         body = json.loads(request.body)
         parent_id = body.get('parent_id')
+        parent_is_admin_reply = body.get('parent_is_admin_reply', False)
         if parent_id:
             comment = BlogComment.objects.create(
                 article_id=article_id,
                 user=request.user,
                 name=request.user.username,
                 comment=body['comment'],
-                parent_id=parent_id
+                parent_id=parent_id,
+                parent_is_admin_reply=parent_is_admin_reply
             )
         else:
             # This is a top-level comment, require rating
@@ -432,7 +439,6 @@ def bookreview_comments_api(request, review_id):
     if request.method == "GET":
         try:
             review = BookReview.objects.get(id=review_id)
-            # Fetch only active comments and prefetch active replies
             comments = review.comments.filter(is_active=True, parent__isnull=True).prefetch_related(
                 models.Prefetch('replies', queryset=BookReviewComment.objects.filter(is_active=True).order_by('date'))
             )
@@ -442,7 +448,6 @@ def bookreview_comments_api(request, review_id):
                     comment_type='bookreview',
                     is_active=True
                 ).order_by('date')
-                # Flat user replies
                 flat_user_replies = flatten_replies_for_api(comment)
                 return {
                     'id': comment.id,
@@ -451,15 +456,7 @@ def bookreview_comments_api(request, review_id):
                     'rating': comment.rating,
                     'date': comment.date.strftime('%Y-%m-%d %H:%M'),
                     'profile_image': comment.user.userprofile.profile_image.url if comment.user and hasattr(comment.user, 'userprofile') and comment.user.userprofile.profile_image else '/static/images/default-avatar.png',
-                    'replies': [{
-                        'id': reply.id,
-                        'name': reply.user.username if reply.user else reply.name,
-                        'comment': reply.comment,
-                        'rating': reply.rating,
-                        'date': reply.date.strftime('%Y-%m-%d %H:%M'),
-                        'profile_image': reply.user.userprofile.profile_image.url if reply.user and hasattr(reply.user, 'userprofile') and reply.user.userprofile.profile_image else '/static/images/default-avatar.png',
-                        'parent_name': reply.parent.name if reply.parent else comment.name
-                    } for reply in flat_user_replies],
+                    'replies': flat_user_replies,
                     'admin_replies': [{
                         'reply': r.reply,
                         'admin_name': r.admin_name,
@@ -475,6 +472,7 @@ def bookreview_comments_api(request, review_id):
             return JsonResponse({'success': False, 'error': 'Authentication required.'}, status=403)
         body = json.loads(request.body)
         parent_id = body.get('parent_id')
+        parent_is_admin_reply = body.get('parent_is_admin_reply', False)
         if parent_id:
             try:
                 parent_comment = BookReviewComment.objects.get(id=parent_id)
@@ -487,7 +485,8 @@ def bookreview_comments_api(request, review_id):
                 user=request.user,
                 name=request.user.username,
                 comment=body['comment'],
-                parent=parent_comment
+                parent=parent_comment,
+                parent_is_admin_reply=parent_is_admin_reply
             )
         else:
             # This is a top-level comment, require rating
@@ -541,7 +540,6 @@ def news_comments_api(request, news_id):
     if request.method == "GET":
         try:
             news = News.objects.get(id=news_id)
-            # Fetch only active comments and prefetch active replies
             comments = news.comments.filter(is_active=True, parent__isnull=True).prefetch_related(
                 models.Prefetch('replies', queryset=NewsComment.objects.filter(is_active=True).order_by('date'))
             )
@@ -551,7 +549,6 @@ def news_comments_api(request, news_id):
                     comment_type='news',
                     is_active=True
                 ).order_by('date')
-                # Flat user replies
                 flat_user_replies = flatten_replies_for_api(comment)
                 return {
                     'id': comment.id,
@@ -560,15 +557,7 @@ def news_comments_api(request, news_id):
                     'rating': comment.rating,
                     'date': comment.date.strftime('%Y-%m-%d %H:%M'),
                     'profile_image': comment.user.userprofile.profile_image.url if comment.user and hasattr(comment.user, 'userprofile') and comment.user.userprofile.profile_image else '/static/images/default-avatar.png',
-                    'replies': [{
-                        'id': reply.id,
-                        'name': reply.user.username if reply.user else reply.name,
-                        'comment': reply.comment,
-                        'rating': reply.rating,
-                        'date': reply.date.strftime('%Y-%m-%d %H:%M'),
-                        'profile_image': reply.user.userprofile.profile_image.url if reply.user and hasattr(reply.user, 'userprofile') and reply.user.userprofile.profile_image else '/static/images/default-avatar.png',
-                        'parent_name': reply.parent.name if reply.parent else comment.name
-                    } for reply in flat_user_replies],
+                    'replies': flat_user_replies,
                     'admin_replies': [{
                         'reply': r.reply,
                         'admin_name': r.admin_name,
@@ -584,6 +573,7 @@ def news_comments_api(request, news_id):
             return JsonResponse({'success': False, 'error': 'Authentication required.'}, status=403)
         body = json.loads(request.body)
         parent_id = body.get('parent_id')
+        parent_is_admin_reply = body.get('parent_is_admin_reply', False)
         if parent_id:
             try:
                 parent_comment = NewsComment.objects.get(id=parent_id)
@@ -596,7 +586,8 @@ def news_comments_api(request, news_id):
                 user=request.user,
                 name=request.user.username,
                 comment=body['comment'],
-                parent=parent_comment
+                parent=parent_comment,
+                parent_is_admin_reply=parent_is_admin_reply
             )
         else:
             # This is a top-level comment, require rating
@@ -650,7 +641,6 @@ def book_comments_api(request, book_id):
     if request.method == "GET":
         try:
             book = Book.objects.get(id=book_id)
-            # Fetch only active comments and prefetch active replies
             comments = book.comments.filter(is_active=True, parent__isnull=True).prefetch_related(
                 models.Prefetch('replies', queryset=BookComment.objects.filter(is_active=True).order_by('date'))
             )
@@ -660,7 +650,6 @@ def book_comments_api(request, book_id):
                     comment_type='book',
                     is_active=True
                 ).order_by('date')
-                # Flat user replies
                 flat_user_replies = flatten_replies_for_api(comment)
                 return {
                     'id': comment.id,
@@ -669,15 +658,7 @@ def book_comments_api(request, book_id):
                     'rating': comment.rating,
                     'date': comment.date.strftime('%Y-%m-%d %H:%M'),
                     'profile_image': comment.user.userprofile.profile_image.url if comment.user and hasattr(comment.user, 'userprofile') and comment.user.userprofile.profile_image else '/static/images/default-avatar.png',
-                    'replies': [{
-                        'id': reply.id,
-                        'name': reply.user.username if reply.user else reply.name,
-                        'comment': reply.comment,
-                        'rating': reply.rating,
-                        'date': reply.date.strftime('%Y-%m-%d %H:%M'),
-                        'profile_image': reply.user.userprofile.profile_image.url if reply.user and hasattr(reply.user, 'userprofile') and reply.user.userprofile.profile_image else '/static/images/default-avatar.png',
-                        'parent_name': reply.parent.name if reply.parent else comment.name
-                    } for reply in flat_user_replies],
+                    'replies': flat_user_replies,
                     'admin_replies': [{
                         'reply': r.reply,
                         'admin_name': r.admin_name,
@@ -693,6 +674,7 @@ def book_comments_api(request, book_id):
             return JsonResponse({'success': False, 'error': 'Authentication required.'}, status=403)
         body = json.loads(request.body)
         parent_id = body.get('parent_id')
+        parent_is_admin_reply = body.get('parent_is_admin_reply', False)
         if parent_id:
             try:
                 parent_comment = BookComment.objects.get(id=parent_id)
@@ -705,7 +687,8 @@ def book_comments_api(request, book_id):
                 user=request.user,
                 name=request.user.username,
                 comment=body['comment'],
-                parent=parent_comment
+                parent=parent_comment,
+                parent_is_admin_reply=parent_is_admin_reply
             )
         else:
             # This is a top-level comment, require rating
