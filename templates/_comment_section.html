@@ -54,6 +54,15 @@
     </div>
 </section>
 
+<!-- Add this at the end of the comments section, before </section> -->
+<div id="global-menu-dropdown" class="menu-dropdown" style="display:none;">
+    <button class="edit-menu-btn"><i class="fas fa-edit"></i> Edit</button>
+    <div class="menu-divider"></div>
+    <button class="delete-menu-btn"><i class="fas fa-trash"></i> Delete</button>
+    <div class="menu-divider"></div>
+    <button class="share-menu-btn"><i class="fas fa-share"></i> Share</button>
+</div>
+
 {% block extra_css %}
 <style>
 #star-rating i {
@@ -86,7 +95,7 @@
     position: relative;
 }
 
-.comment-bubble, .reply-bubble {
+.comment-bubble, .reply-bubble, .admin-reply-bubble {
     background: rgba(28, 28, 32, 0.7);
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
@@ -99,6 +108,8 @@
     gap: 1rem;
     color: #fff;
     transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+    z-index: auto;
+    overflow: visible !important;
 }
 
 .comment-bubble:hover, .reply-bubble:hover {
@@ -300,16 +311,118 @@
 }
 
 .reply-to-admin { color: #85C1E9; font-weight: 600; }
+
+.three-dots-menu {
+    position: absolute;
+    top: 1.2rem;
+    right: 1.2rem;
+    z-index: 10;
+}
+.three-dots-btn {
+    background: none;
+    border: none;
+    color: #bbb;
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0 6px;
+    border-radius: 50%;
+    transition: background 0.2s;
+}
+.three-dots-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: #ff6600;
+}
+.menu-dropdown {
+    display: none;
+}
+.menu-dropdown.active {
+    display: block !important;
+}
+.menu-dropdown button, .menu-dropdown a {
+    display: block;
+    width: 100%;
+    background: none;
+    border: none;
+    color: #eee;
+    text-align: left;
+    padding: 12px 20px;
+    font-size: 1em;
+    cursor: pointer;
+    border-radius: 0;
+    transition: background 0.18s, color 0.18s;
+    outline: none;
+}
+.menu-dropdown button:hover, .menu-dropdown a:hover {
+    background: #ff6600;
+    color: #fff;
+}
+.menu-dropdown .menu-divider {
+    height: 1px;
+    background: linear-gradient(to right, transparent, #ff6600 40%, transparent);
+    margin: 0 10px;
+    border: none;
+    opacity: 0.5;
+}
+
+.three-dots-menu.right-center {
+    position: absolute;
+    top: 50%;
+    right: 1.2rem;
+    transform: translateY(-50%);
+    z-index: 10;
+}
+
+#global-menu-dropdown {
+    position: fixed;
+    z-index: 2147483647 !important;
+    background: transparent;
+    color: #fff;
+    border-radius: 18px;
+    min-width: 140px;
+    box-shadow: 0 6px 32px rgba(0,0,0,0.22);
+    padding: 0.3rem 0;
+    font-size: 1em;
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: none;
+    transition: box-shadow 0.18s;
+}
+.menu-dropdown button, .menu-dropdown a {
+    padding: 12px 22px;
+    font-size: 1.08em;
+    border-radius: 0;
+    background: none;
+    border: none;
+    color: #eee;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.18s, color 0.18s;
+}
+.menu-dropdown button:hover, .menu-dropdown a:hover {
+    background: #ff6600;
+    color: #fff;
+}
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+let lastThreeDotsBtn = null;
 document.addEventListener('DOMContentLoaded', function() {
     const objectId = "{{ object_id }}";
     const contentType = "{{ content_type }}";
     const isAuthenticated = JSON.parse("{{ user.is_authenticated|yesno:'true,false' }}");
     const csrftoken = "{{ csrf_token }}";
+    
+    // Map contentType to API comment_type
+    function getApiCommentType(contentType) {
+        if (contentType === 'article') return 'blog';
+        if (contentType === 'book') return 'book';
+        if (contentType === 'news') return 'news';
+        if (contentType === 'bookreview') return 'bookreview';
+        return contentType;
+    }
+    const apiCommentType = getApiCommentType(contentType);
     
     // Determine the correct API endpoint based on content type
     let apiEndpoint;
@@ -373,48 +486,72 @@ document.addEventListener('DOMContentLoaded', function() {
              for (let i = 0; i < 5; i++) {
                  starsHtml += i < comment.rating ? '<i class="fas fa-star"></i>' : '<i class="far fa-star"></i>';
              }
+             let menuHtml = '';
+             if (comment.is_owner) {
+                 menuHtml = `
+                     <div class="three-dots-menu right-center" data-menu-id="${comment.id}">
+                         <button class="three-dots-btn" data-menu-type="comment" data-menu-id="${comment.id}" aria-label="Options"><i class="fas fa-ellipsis-h"></i></button>
+                     </div>`;
+             }
              let adminReplyHtml = '';
              if (comment.admin_replies && comment.admin_replies.length > 0) {
                  const adminAvatarUrl = "{% static 'images/websitemainlogo.jpg' %}";
-                 const repliesInnerHtml = comment.admin_replies.map(reply => `
-                    <div class="reply-bubble admin-reply-bubble">
+                 const repliesInnerHtml = comment.admin_replies.map(reply => {
+                     let adminMenuHtml = '';
+                     if (reply.is_owner) {
+                         adminMenuHtml = `
+                             <div class="three-dots-menu right-center" data-menu-id="${comment.id}-${reply.date.replace(/[^-\u007F]/g, '')}">
+                                 <button class="three-dots-btn" data-menu-type="adminreply" data-menu-id="${comment.id}-${reply.date.replace(/[^-\u007F]/g, '')}" aria-label="Options"><i class="fas fa-ellipsis-h"></i></button>
+                             </div>`;
+                     }
+                     return `
+                         <div class="reply-bubble admin-reply-bubble" style="position:relative;">
                         <img src="${adminAvatarUrl}" class="profile-img" alt="Admin" />
                         <div class="comment-content">
                             <div class="comment-header">
                                 <span class="comment-author">Admin <i class="fas fa-shield-alt" style="color: #85C1E9; font-size: 0.9em; margin-left: 5px;" title="Admin"></i></span>
                                 <span class="comment-date">${reply.date}</span>
                             </div>
-                            <div class="reply-to${reply.parent_name === 'Admin' ? ' reply-to-admin' : ''}">reply to @${reply.parent_name}</div>
-                            <div class="comment-text">${reply.reply}</div>
-                            ${isAuthenticated ? `<button class="reply-btn comment-reply-btn" data-reply-id="admin-${reply.date.replace(/[^\d]/g, '')}" data-parent-comment-id="${comment.id}" data-mention="${reply.admin_name}"><i class='fas fa-reply'></i> Reply</button>` : ''}
-                            ${isAuthenticated ? `<div id="reply-form-admin-${reply.date.replace(/[^\d]/g, '')}" class="reply-form" style="display:none;">
-                                <textarea id="reply-input-admin-${reply.date.replace(/[^\d]/g, '')}" class="form-control mb-2" rows="2" placeholder="Write your reply..."></textarea>
-                                <button class="btn btn-primary btn-sm send-reply-btn" data-reply-id="admin-${reply.date.replace(/[^\d]/g, '')}" data-parent-comment-id="${comment.id}">Send Reply</button>
-                                <button class="btn btn-secondary btn-sm cancel-reply-btn" data-reply-id="admin-${reply.date.replace(/[^\d]/g, '')}">Cancel</button>
-                                <span id="reply-error-admin-${reply.date.replace(/[^\d]/g, '')}" class="text-danger ms-2" style="font-size:0.95em;"></span>
+                                 ${adminMenuHtml}
+                                 <div class="reply-to${reply.parent_name === 'Admin' ? ' reply-to-admin' : ''}">reply to @${reply.parent_name}</div>
+                            <div class="comment-text" id="reply-text-${reply.id}">${reply.reply}</div>
+                            ${isAuthenticated ? `<button class="reply-btn comment-reply-btn" data-reply-id="admin-${reply.date.replace(/[^-\u007F]/g, '')}" data-parent-comment-id="${comment.id}" data-mention="${reply.admin_name}"><i class='fas fa-reply'></i> Reply</button>` : ''}
+                            ${isAuthenticated ? `<div id="reply-form-admin-${reply.date.replace(/[^-\u007F]/g, '')}" class="reply-form" style="display:none;">
+                                <textarea id="reply-input-admin-${reply.date.replace(/[^-\u007F]/g, '')}" class="form-control mb-2" rows="2" placeholder="Write your reply..."></textarea>
+                                <button class="btn btn-primary btn-sm send-reply-btn" data-reply-id="admin-${reply.date.replace(/[^-\u007F]/g, '')}" data-parent-comment-id="${comment.id}">Send Reply</button>
+                                <button class="btn btn-secondary btn-sm cancel-reply-btn" data-reply-id="admin-${reply.date.replace(/[^-\u007F]/g, '')}">Cancel</button>
+                                <span id="reply-error-admin-${reply.date.replace(/[^-\u007F]/g, '')}" class="text-danger ms-2" style="font-size:0.95em;"></span>
                             </div>` : ''}
                         </div>
                     </div>
-                 `).join('');
+                     `;
+                 }).join('');
                  adminReplyHtml = `<div class="admin-reply-container">${repliesInnerHtml}</div>`;
              }
              let repliesHtml = '';
              if (comment.replies && comment.replies.length) {
-                 // Use backend's flat replies directly
                  let flatReplies = comment.replies;
                  flatReplies = flatReplies.sort((a, b) => new Date(a.date) - new Date(b.date));
                  repliesHtml = `<div class="replies-list">${flatReplies.map(reply => {
+                     let replyMenuHtml = '';
+                     if (reply.is_owner) {
+                         replyMenuHtml = `
+                             <div class="three-dots-menu right-center" data-menu-id="${reply.id}">
+                                 <button class="three-dots-btn" data-menu-type="reply" data-menu-id="${reply.id}" aria-label="Options"><i class="fas fa-ellipsis-h"></i></button>
+                             </div>`;
+                     }
                      let replyTo = reply.parent_name ? `<div class='reply-to${reply.parent_name === 'Admin' ? ' reply-to-admin' : ''}'>reply to @${reply.parent_name}</div>` : '';
                      return `
-                         <div class="reply-bubble">
+                         <div class="reply-bubble" style="position:relative;">
                              <img src="${reply.profile_image}" class="profile-img" alt="Profile" />
                              <div class="comment-content">
                                  <div class="comment-header">
                                      <span class="comment-author">${reply.name}</span>
                                      <span class="comment-date">${reply.date}</span>
                                  </div>
+                                 ${replyMenuHtml}
                                  ${replyTo}
-                                 <div class="comment-text">${reply.comment}</div>
+                                 <div class="comment-text" id="reply-text-${reply.id}">${reply.comment}</div>
                                  ${isAuthenticated ? `<button class="reply-btn comment-reply-btn" data-reply-id="${reply.id}" data-mention="${reply.name}"><i class='fas fa-reply'></i> Reply</button>` : ''}
                                  ${isAuthenticated ? `<div id="reply-form-${reply.id}" class="reply-form" style="display:none;">
                                      <textarea id="reply-input-${reply.id}" class="form-control mb-2" rows="2" placeholder="Write your reply..."></textarea>
@@ -428,8 +565,8 @@ document.addEventListener('DOMContentLoaded', function() {
                  }).join('')}</div>`;
              }
              return `
-                 <div class="comment-thread">
-                 <div class="comment-bubble">
+                 <div class="comment-thread" id="comment-${comment.id}">
+                 <div class="comment-bubble" style="position:relative;">
                      <img src="${comment.profile_image}" class="profile-img" alt="Profile" />
                      <div class="comment-content">
                          <div class="comment-header">
@@ -437,6 +574,7 @@ document.addEventListener('DOMContentLoaded', function() {
                              <span class="comment-date">${comment.date}</span>
                              <div class="comment-rating">${starsHtml}</div>
                          </div>
+                         ${menuHtml}
                          <div class="comment-text" id="comment-text-${comment.id}">${comment.comment}</div>
                          ${isAuthenticated ? `<button class="reply-btn comment-reply-btn" data-reply-id="${comment.id}" data-mention="${comment.name}"><i class='fas fa-reply'></i> Reply</button>` : ''}
                          <div id="reply-form-${comment.id}" class="reply-form" style="display:none;">
@@ -493,9 +631,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (result.success) {
                     document.getElementById('comment-text').value = '';
                     if (stars.length > 0) stars.forEach(s => s.classList.remove('selected'));
-                    selectedRating = 0;
+                selectedRating = 0;
                     // Optionally reload comments here
-                    loadComments();
+                loadComments();
                 } else {
                     alert(result.error || 'Failed to post comment.');
                 }
@@ -578,9 +716,375 @@ document.addEventListener('DOMContentLoaded', function() {
                 errorSpan.textContent = error.message;
             });
         }
+        // Three dots menu toggle (advanced fixed positioning)
+        if (e.target.closest('.three-dots-btn')) {
+            const btn = e.target.closest('.three-dots-btn');
+            lastThreeDotsBtn = btn; // Store reference
+            const menuType = btn.getAttribute('data-menu-type');
+            const menuId = btn.getAttribute('data-menu-id');
+            const menu = document.getElementById('global-menu-dropdown');
+            // Modern: Position menu below and centered under the button
+            const rect = btn.getBoundingClientRect();
+            menu.classList.add('active'); // Make visible to measure width
+            const menuWidth = menu.offsetWidth;
+            menu.classList.remove('active');
+            const left = Math.max(8, Math.min(rect.left + (rect.width / 2) - (menuWidth / 2), window.innerWidth - menuWidth - 8));
+            const top = rect.bottom + 8;
+            menu.style.left = left + 'px';
+            menu.style.top = top + 'px';
+            menu.classList.add('active');
+            // Set data attributes for later use
+            menu.setAttribute('data-menu-type', menuType);
+            menu.setAttribute('data-menu-id', menuId);
+            // Hide any other menus
+            document.querySelectorAll('.menu-dropdown').forEach(m => { if (m !== menu) m.classList.remove('active'); });
+            // --- Ab button ko hide karo (after positioning) ---
+            btn.style.display = 'none';
+            e.stopPropagation();
+            return;
+        }
+        // Hide menu if click outside
+        if (!e.target.closest('.menu-dropdown')) {
+            document.getElementById('global-menu-dropdown').classList.remove('active');
+            if (lastThreeDotsBtn) {
+                // Only show the button if its edit form is NOT open
+                const menuType = lastThreeDotsBtn.getAttribute('data-menu-type');
+                const menuId = lastThreeDotsBtn.getAttribute('data-menu-id');
+                let editFormOpen = false;
+                if (menuType === 'comment') {
+                    const editForm = document.getElementById('edit-form-comment-' + menuId);
+                    editFormOpen = editForm && editForm.style.display === 'block';
+                } else if (menuType === 'reply') {
+                    const editForm = document.getElementById('edit-form-reply-' + menuId);
+                    editFormOpen = editForm && editForm.style.display === 'block';
+                }
+                if (!editFormOpen) {
+                    lastThreeDotsBtn.style.display = '';
+                    lastThreeDotsBtn = null;
+                }
+                // If edit form is open, do NOT show the button or clear lastThreeDotsBtn
+            }
+        }
+        // Share button
+        if (e.target.closest('.share-comment-btn')) {
+            const btn = e.target.closest('.share-comment-btn');
+            const commentId = btn.getAttribute('data-id');
+            const url = window.location.origin + window.location.pathname + '#comment-' + commentId;
+            navigator.clipboard.writeText(url).then(() => {
+                btn.textContent = 'Link Copied!';
+                setTimeout(() => { btn.innerHTML = '<i class="fas fa-share"></i> Share'; }, 1200);
+            });
+            e.stopPropagation();
+            return;
+        }
+        // Share for replies
+        if (e.target.closest('.share-reply-btn')) {
+            const btn = e.target.closest('.share-reply-btn');
+            const replyId = btn.getAttribute('data-id');
+            const url = window.location.origin + window.location.pathname + '#reply-' + replyId;
+            navigator.clipboard.writeText(url).then(() => {
+                btn.textContent = 'Link Copied!';
+                setTimeout(() => { btn.innerHTML = '<i class="fas fa-share"></i> Share'; }, 1200);
+            });
+            e.stopPropagation();
+            return;
+        }
+        // Share for admin replies
+        if (e.target.closest('.share-adminreply-btn')) {
+            const btn = e.target.closest('.share-adminreply-btn');
+            const replyId = btn.getAttribute('data-id');
+            const url = window.location.origin + window.location.pathname + '#adminreply-' + replyId;
+            navigator.clipboard.writeText(url).then(() => {
+                btn.textContent = 'Link Copied!';
+                setTimeout(() => { btn.innerHTML = '<i class="fas fa-share"></i> Share'; }, 1200);
+            });
+            e.stopPropagation();
+            return;
+        }
+        // Edit comment
+        if (e.target.closest('.edit-comment-btn')) {
+            const btn = e.target.closest('.edit-comment-btn');
+            const commentId = btn.getAttribute('data-id');
+            showEditCommentForm(commentId);
+            e.stopPropagation();
+            return;
+        }
+        // Cancel edit comment
+        if (e.target.closest('.cancel-edit-comment-btn')) {
+            const btn = e.target.closest('.cancel-edit-comment-btn');
+            const commentId = btn.getAttribute('data-id');
+            const textDiv = document.getElementById('comment-text-' + commentId);
+            const editForm = document.getElementById('edit-form-comment-' + commentId);
+            if (textDiv && editForm) {
+                textDiv.style.display = 'block';
+                editForm.style.display = 'none';
+            }
+            // Show the three dots button again
+            const menuDiv = document.querySelector(`.three-dots-menu[data-menu-id='${commentId}']`);
+            if (menuDiv) menuDiv.style.display = '';
+            e.stopPropagation();
+            return;
+        }
+        // Save edit comment
+        if (e.target.closest('.save-edit-comment-btn')) {
+            const btn = e.target.closest('.save-edit-comment-btn');
+            let commentId = btn.getAttribute('data-id');
+            if (isNaN(commentId)) {
+                alert('Invalid comment ID.');
+                return;
+            }
+            commentId = parseInt(commentId);
+            const textarea = document.getElementById('edit-input-comment-' + commentId);
+            const errorSpan = btn.parentNode.querySelector('.edit-error');
+            const newText = textarea.value.trim();
+            if (!newText) {
+                errorSpan.textContent = 'Comment cannot be empty!';
+                return;
+            }
+            errorSpan.textContent = '';
+            fetch('/api/comments/edit_own/', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ id: commentId, comment: newText, comment_type: apiCommentType })
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    loadComments();
+                    // Show the three dots button again
+                    const menuDiv = document.querySelector(`.three-dots-menu[data-menu-id='${commentId}']`);
+                    if (menuDiv) menuDiv.style.display = '';
+                } else {
+                    errorSpan.textContent = result.error || 'Failed to update comment.';
+                }
+            })
+            .catch(err => { errorSpan.textContent = 'Error: ' + err; });
+            e.stopPropagation();
+            return;
+        }
+        // Delete comment
+        if (e.target.closest('.delete-comment-btn')) {
+            const btn = e.target.closest('.delete-comment-btn');
+            let commentId = btn.getAttribute('data-id');
+            if (isNaN(commentId)) {
+                alert('Invalid comment ID.');
+                return;
+            }
+            commentId = parseInt(commentId);
+            if (!confirm('Are you sure you want to delete this comment? This cannot be undone.')) return;
+            fetch('/api/comments/delete_own/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ id: commentId, comment_type: apiCommentType })
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    loadComments();
+                } else {
+                    alert(result.error || 'Failed to delete comment.');
+                }
+            })
+            .catch(err => { alert('Error: ' + err); });
+            e.stopPropagation();
+            return;
+        }
+        // Edit reply
+        if (e.target.closest('.edit-reply-btn')) {
+            const btn = e.target.closest('.edit-reply-btn');
+            const replyId = btn.getAttribute('data-id');
+            showEditReplyForm(replyId);
+            e.stopPropagation();
+            return;
+        }
+        // Cancel edit reply
+        if (e.target.closest('.cancel-edit-reply-btn')) {
+            const btn = e.target.closest('.cancel-edit-reply-btn');
+            const replyId = btn.getAttribute('data-id');
+            const textDiv = document.getElementById('reply-text-' + replyId);
+            const editForm = document.getElementById('edit-form-reply-' + replyId);
+            if (textDiv && editForm) {
+                textDiv.style.display = 'block';
+                editForm.style.display = 'none';
+            }
+            // Show the three dots button again
+            const menuDiv = document.querySelector(`.three-dots-menu[data-menu-id='${replyId}']`);
+            if (menuDiv) menuDiv.style.display = '';
+            e.stopPropagation();
+            return;
+        }
+        // Save edit reply
+        if (e.target.closest('.save-edit-reply-btn')) {
+            const btn = e.target.closest('.save-edit-reply-btn');
+            let replyId = btn.getAttribute('data-id');
+            if (isNaN(replyId)) {
+                alert('Invalid reply ID.');
+                return;
+            }
+            replyId = parseInt(replyId);
+            const textarea = document.getElementById('edit-input-reply-' + replyId);
+            const errorSpan = btn.parentNode.querySelector('.edit-error');
+            const newText = textarea.value.trim();
+            if (!newText) {
+                errorSpan.textContent = 'Reply cannot be empty!';
+                return;
+            }
+            errorSpan.textContent = '';
+            fetch('/api/comments/edit_own/', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ id: replyId, comment: newText, comment_type: apiCommentType })
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    loadComments();
+                    // Show the three dots button again
+                    const menuDiv = document.querySelector(`.three-dots-menu[data-menu-id='${replyId}']`);
+                    if (menuDiv) menuDiv.style.display = '';
+                } else {
+                    errorSpan.textContent = result.error || 'Failed to update reply.';
+                }
+            })
+            .catch(err => { errorSpan.textContent = 'Error: ' + err; });
+            e.stopPropagation();
+            return;
+        }
+        // Delete reply
+        if (e.target.closest('.delete-reply-btn')) {
+            const btn = e.target.closest('.delete-reply-btn');
+            let replyId = btn.getAttribute('data-id');
+            if (isNaN(replyId)) {
+                alert('Invalid reply ID.');
+                return;
+            }
+            replyId = parseInt(replyId);
+            if (!confirm('Are you sure you want to delete this reply? This cannot be undone.')) return;
+            fetch('/api/comments/delete_own/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({ id: replyId, comment_type: apiCommentType, is_reply: true })
+            })
+            .then(res => res.json())
+            .then(result => {
+                if (result.success) {
+                    loadComments();
+                } else {
+                    alert(result.error || 'Failed to delete reply.');
+                }
+            })
+            .catch(err => { alert('Error: ' + err); });
+            e.stopPropagation();
+            return;
+        }
     });
 
     loadComments();
+
+    // Move the global menu dropdown to the end of <body> for overlay
+    var globalMenu = document.getElementById('global-menu-dropdown');
+    if (globalMenu && globalMenu.parentNode !== document.body) {
+        document.body.appendChild(globalMenu);
+    }
 });
+
+// Hide menu on scroll
+window.addEventListener('scroll', function() {
+    document.getElementById('global-menu-dropdown').classList.remove('active');
+});
+
+// Menu actions (edit, delete, share)
+document.getElementById('global-menu-dropdown').addEventListener('click', function(e) {
+    const menu = this;
+    const menuType = menu.getAttribute('data-menu-type');
+    const menuId = menu.getAttribute('data-menu-id');
+    if (e.target.closest('.edit-menu-btn')) {
+        if (menuType === 'comment') {
+            showEditCommentForm(menuId);
+        } else if (menuType === 'reply') {
+            showEditReplyForm(menuId);
+        }
+        menu.classList.remove('active');
+        if (lastThreeDotsBtn) {
+            lastThreeDotsBtn.style.display = '';
+            lastThreeDotsBtn = null;
+        }
+        e.stopPropagation();
+        return;
+    }
+    if (e.target.closest('.delete-menu-btn') || e.target.closest('.share-menu-btn')) {
+        menu.classList.remove('active');
+        if (lastThreeDotsBtn) {
+            lastThreeDotsBtn.style.display = '';
+            lastThreeDotsBtn = null;
+        }
+        e.stopPropagation();
+        return;
+    }
+});
+
+function showEditCommentForm(commentId) {
+    console.log('showEditCommentForm called', commentId); // DEBUG
+    const textDiv = document.getElementById('comment-text-' + commentId);
+    console.log('comment-text-div:', textDiv); // DEBUG
+    if (!textDiv) return;
+    let editForm = document.getElementById('edit-form-comment-' + commentId);
+    if (!editForm) {
+        editForm = document.createElement('div');
+        editForm.id = 'edit-form-comment-' + commentId;
+        editForm.innerHTML = `
+            <textarea class='form-control mb-2' id='edit-input-comment-${commentId}' rows='3'>${textDiv.textContent.trim()}</textarea>
+            <div style='margin-top:8px;'>
+                <button class='btn btn-success btn-sm save-edit-comment-btn' data-id='${commentId}'>Save</button>
+                <button class='btn btn-secondary btn-sm cancel-edit-comment-btn' data-id='${commentId}'>Cancel</button>
+                <span class='edit-error text-danger ms-2' style='font-size:0.95em;'></span>
+            </div>
+        `;
+        textDiv.parentNode.insertBefore(editForm, textDiv.nextSibling);
+    }
+    textDiv.style.display = 'none';
+    editForm.style.display = 'block';
+    // Hide the three dots button for this comment
+    const menuDiv = document.querySelector(`.three-dots-menu[data-menu-id='${commentId}']`);
+    if (menuDiv) menuDiv.style.display = 'none';
+}
+
+function showEditReplyForm(replyId) {
+    console.log('showEditReplyForm called', replyId); // DEBUG
+    const textDiv = document.getElementById('reply-text-' + replyId);
+    console.log('reply-text-div:', textDiv); // DEBUG
+    if (!textDiv) return;
+    let editForm = document.getElementById('edit-form-reply-' + replyId);
+    if (!editForm) {
+        editForm = document.createElement('div');
+        editForm.id = 'edit-form-reply-' + replyId;
+        editForm.innerHTML = `
+            <textarea class='form-control mb-2' id='edit-input-reply-${replyId}' rows='3'>${textDiv.textContent.trim()}</textarea>
+            <div style='margin-top:8px;'>
+                <button class='btn btn-success btn-sm save-edit-reply-btn' data-id='${replyId}'>Save</button>
+                <button class='btn btn-secondary btn-sm cancel-edit-reply-btn' data-id='${replyId}'>Cancel</button>
+                <span class='edit-error text-danger ms-2' style='font-size:0.95em;'></span>
+            </div>
+        `;
+        textDiv.parentNode.insertBefore(editForm, textDiv.nextSibling);
+    }
+    textDiv.style.display = 'none';
+    editForm.style.display = 'block';
+    // Hide the three dots button for this reply
+    const menuDiv = document.querySelector(`.three-dots-menu[data-menu-id='${replyId}']`);
+    if (menuDiv) menuDiv.style.display = 'none';
+}
 </script>
 {% endblock %} 
